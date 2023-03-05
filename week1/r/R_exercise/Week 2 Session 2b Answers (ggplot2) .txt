@@ -1,0 +1,208 @@
+---
+Title: "Module 1  Introduction to R - WeeK 2 Session 2b Answers."
+Author:"Doogan, C, Gao, C. (2017)."
+
+Date:  "July 2017."
+---
+  
+# Humans are visual creatures, and it is much easier to see a graphical representation when working with data than to post a bunch of numbers on a screen.
+# For this reason we are going to be learning how to visualise data in R at the same time as conducting an exploratory statistical analysis. 
+# ggplot2 is the later in R visualisation packaging. It is far more superior than older scripting methods, and you should adopt this package as your go-to rather than other methods. 
+# Although ggplot2 is fantastic for in-depth visualisation, some of the more basic methods are fine to use when starting off. ggplot2 incorporates these in-built functions you will see. 
+# *Note* some MDS units do not teach ggplot2 but accept theIR use in assessments  (and tutors even enjoy looking at them more!).However, as some markers may not be as familiar with
+# ggplot2 as other methods, you should make sure that your comments are concise but helpful in explaining your rationale. 
+  
+  
+# Install packages
+install.packages("ggplot2")
+library(ggplot2)
+library(dplyr)
+
+# Import data
+getwd()
+
+gapminder <- read.csv("gapminder-FiveYearData.csv", header = TRUE)
+
+### Base Plotting
+# Base R provide convince ways to quickly generate graphics. The primary functions include:
+# Here we will use the mtcars dataset to have a look at these functions. 
+# First we need to see what variables we have so we call dim() and summary()
+dim(mtcars)
+# This is a data frame with 32 observations on 11 variables.
+# The search function of the Help tab in the Environment window is used to find out what these variables mean.
+# *Note* In some MDS units, explanations of what the variables are may not be given. You must assess the features of this data to get an understanding of how to manipulate it.
+# This is a key aspect of working with data in data science.
+# From the help function we learn that the variables in mtcars are:
+# [, 1]     mpg     Miles/(US) gallon
+# [, 2]     cyl     Number of cylinders
+# [, 3]     disp     Displacement (cu.in.)
+# [, 4]     hp     Gross horsepower
+# [, 5]     drat     Rear axle ratio
+# [, 6]     wt     Weight (1000 lbs)
+# [, 7]     qsec     1/4 mile time
+# [, 8]     vs     V/S
+# [, 9]     am     Transmission (0 = automatic, 1 = manual)
+# [,10]     gear     Number of forward gears
+# [,11]     carb     Number of carburettors
+
+# Challenge 1: Recall what [,1] means.
+# Answer: 
+# This means the data frame arranges each of the variables by volume. The mpg variable is stored in the first column. 
+
+# This is observed when we call the summary() function. 
+summary(mtcars)
+# Using summary we see that the data is quite varied. Our first goal is to determine what type of data this is, e.g., continuous, discrete, categorical, binary, etc.
+# For an overview of the statistical data type.
+# We see that there is a lot of what looks like numerical continuous (mpg, disp, drat, wt, qsec), numerical discrete (cyl, hp, gear), categorical nominal (vs, am).
+
+# To make sure we are right though. We can inspect using the pairs() function:
+pairs(mtcars)
+
+# plot: make scatter plot
+# We investigate the gears variable which we are not sure is categorical or numerical
+plot(mtcars$gear)
+# We should do this as a frequency
+tab_gears<-table(mtcars$gear)
+plot(tab_gears)
+
+# It is probably discrete, but we cannot be sure.
+# The rest of the functions are:
+
+# lines: add lines to plot
+# points: add points to plot
+# text: add text
+# title: add title to axes or plot
+# mtext: add margin text
+# axis: add axis tick/labels
+# hist: make a histogram
+# box: make a histogram
+# Using these functions, plotting features can be specified using following parameters:
+# pch: plotting symbol
+# lty: line type
+# lwd: line width
+# col: plotting colour
+# las: orientation of axis labels
+# bg: background color
+# mar: margin size
+# oma: outer margin size
+# mfrow: number of plots per row, column. Plots filled in row-wise.
+# mfcol: number of plots per row, column. Plots filled in column-wise.
+# xlab: a title for the x axis
+# ylab: a title for the y axis: see title.
+
+# Working on gapminder:
+
+### Plotting : plot()
+# Look at the life expectancy 
+plot (gapminder$lifeExp)
+# It is very difficult to look at and infer anything about the data. We can present
+# the data by year and we will only look at the mean.
+life_exp_year<-gapminder %>% group_by (year) %>% summarise(mean_lifeExp=mean(lifeExp))
+plot(life_exp_year)
+# Add some lables
+plot(life_exp_year, xlab="Year", ylab="Life expectancy")
+
+
+# Boxplots: box()
+# making a boxplot with GDP
+boxplot(gapminder$gdpPercap, ylab="GDP per capita")
+# That looks horrible. We can fiX it using boxwex= a scaling factor to make boxes narrower or wider and log= to scale . 
+boxplot(gapminder$gdpPercap, ylab="GDP per capita", boxwex =1,log = "y" )
+# Change the colour of the boxplot with col= and the border with border=
+boxplot(gapminder$gdpPercap, ylab="GDP per capita", boxwex =1,log = "y", col="red", border="Blue" )
+
+# We used group_by() to get the mean using the summarize() functions. But a simple way when just wanting to 
+# display data by another variable is to use ~ e.g. gdpPercap ~ year
+# Challenge 2: Create a boxplot of life expectancy by continent
+# Answer:
+boxplot(lifeExp~continent, data=gapminder, ylab="Life expectancy")
+
+### ggplot2 
+# All of those functions can be called on different graph types
+# e.g plot(), hist(), bar() etc. But ggplot2 can be thought of as a way to use those graph types with add ons to 
+# make the functions look more visually pleasing.
+# ggplot2 is an advanced plotting package, which is increased due to its efficiency and flexibility.
+#here does the “gg” in ggplot2 come from? The ggplot2 package provides an R implementation of Leland Wilkinson’s Grammar of Graphics (1999).
+# The Grammar of Graphics allows you to think beyond the garden variety plot types (e.g. scatter plot, bar plot) and the 
+# consider the components that make up a plot or graphic, such as how data are represented on the plot (as lines, points, etc.),
+# how variables are mapped to coordinates or plotting shape or color, what transformation or statistical summary is required,
+# and so on.the idea that any plot can be expressed from the same set of components: 
+# a data set, a coordinate system, and a set of geoms–the visual representation of data points.
+# The key to understanding ggplot2 is thinking about a figure in layers.
+# This idea may be familiar to you if you have used image editing programs like Photoshop, Illustrator, or Inkscape.
+
+# Specifically, ggplot2 allows you to build a plot layer-by-layer by specifying:
+# a geom, which specifies how the data are represented on the plot (points, lines, bars, etc.),
+# aesthetics that map variables in the data to axes on the plot or plotting size, shape, colour, etc.,
+# a stat, a statistical transformation or summary of the data applied before plotting,
+# facets, which we’ve already seen above that allow the data to be divided into chunks by other categorical 
+# or continuous variables and the same plot drawn for each piece.
+
+# The commonly used plotting functions include:
+# geom_point: for scatter plot
+# geom_line: for line plot.
+# geom_bar: for bar plot
+# geom_histogram: for histogram
+# geom_boxplot: for boxplot
+# geom_density: for smoothed density plot
+
+# If we want to plit a continous variable X by continous variable Y we can use a scatterplot.
+ggplot(gapminder, aes(x = gdpPercap, y = lifeExp)) + geom_point()
+# We are telling ggplot2 to go and user the gapminder dataset
+# Then use aesthetic mapping to map the gdpPerCap data onto the x axis and the lifeExp onto the y axis. 
+# We use geom_point() to to specificy the geometric object that needs to be ploted (there are many types).
+# We can add lables and then change the size of the points using size().
+# We can also modify the transparency of the points, using the alpha function,
+# which is especially helpful when you have a large amount of data which is very clustered.
+ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp)) + geom_point( size = 2,alpha = 0.5)+  xlab("GDP per capita")+ ylab("Life expectancy")
+
+# It is hard to see what is happening so we can add some colour. Here we tell ggplot to plot
+# the data by continent
+ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp, color=continent)) +
+  geom_point( size = 2,alpha = 0.5)+
+  xlab("GDP per capita")+
+  ylab("Life expectancy")
+# It is still hard to see what is happening because of all the ouliers.
+# So now we can change the scale of the data using the scale_log_10() function.
+ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp, color=continent)) +
+  geom_point( size = 2,alpha = 0.5)+
+  xlab("GDP per capita")+
+  ylab("Life expectancy")+
+  scale_x_log10()
+# The log10 function applied a transformation to the values of the gdpPercap column before rendering them on the plot,
+# so that each multiple of 10 now only corresponds to an increase in 1 on the transformed scale,
+# e.g. a GDP per capita of 1,000 is now 3 on the y axis, a value of 10,000 corresponds to 4 on the y axis and so on.
+# This makes it easier to visualize the spread of data on the x-axis.
+
+# Challenge 2: Create a density plot of GDP per capita, 
+# filled by continent.Transform the x axis to better visualise the data spread.
+#  Answer:
+ggplot(data = gapminder, aes(x = gdpPercap, fill=continent)) +
+  geom_density(alpha=0.6) +
+  xlab("GDP per capita")+
+  ylab("Density")+
+  scale_x_log10()
+#  This is very helpful for comparing distributions.
+
+# plot() and pairs() is used to see multi-pannel graphs of variables.
+pairs(gapminder)
+plot(gapminder$lifeExp,gapminder$country)
+# But ggplot2 has a nicer way:
+ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point( size = 1,alpha = 0.5)+
+  xlab("GDP per capita")+
+  ylab("Life expectancy") +
+  facet_wrap( ~ continent) +
+  scale_x_log10()
+
+# Challange 3:Add a facet layer to panel the previous density plots by year.
+# Answer:
+ggplot(data = gapminder, aes(x = gdpPercap, fill=continent)) +
+  geom_density(alpha=0.6) +
+  xlab("GDP per capita")+
+  ylab("Density")+
+  scale_x_log10() +
+  # your code:
+  facet_wrap( ~ year) 
+
+# End session. 

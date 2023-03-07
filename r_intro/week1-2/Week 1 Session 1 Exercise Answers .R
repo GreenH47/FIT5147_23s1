@@ -280,7 +280,7 @@ poke <- c("Squirtle", "Charmander", "Bulbasaur")
 typeof(poke) # character
 length(poke) # 3
 class(poke)  # character
-
+str(poke)
 
 ### Adding Elements
 
@@ -354,7 +354,7 @@ temperature[11] # <NA> NA
 
 # Challenge 9: Create a vector for average temperature in Melbourne for each month.
 # Jan    Feb    Mar    Apr    May    Jun    Jul    Aug    Sep    Oct    Nov    Dec
-# °C    21    21    19    17    14    11    10    11    13    15    17    19
+# ?C    21    21    19    17    14    11    10    11    13    15    17    19
 
 
 temp_month<-c(21, 21, 19, 17, 14, 11, 10, 11, 13, 15, 17, 19)

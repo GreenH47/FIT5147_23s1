@@ -1,0 +1,279 @@
+Title: "Module 2  Introduction to R -  Week 3 Graphing with ggplo2 - graphing features"
+Author: "Doogan, C.(2017)."
+Date: "June 2017."
+
+# This week we are going to go through more ggplot2 uses  with example of when to use each of these tools. 
+# The following is bar graphing example from 'The R Cookbook' chang, W. (2016).
+
+# The examples below will the ToothGrowth dataset. Note that dose is a numeric column here;
+# in some situations it may be useful to convert it to a factor.
+
+library(ggplot2)
+
+### Titles 
+# An example graph without a title:
+bp <- ggplot(PlantGrowth, aes(x=group, y=weight)) + geom_boxplot()
+bp
+
+# With a title:
+bp + ggtitle("Plant growth")
+# Equivalent to
+# bp + labs(title="Plant growth")
+
+# If the title is long, it can be split into multiple lines with \n
+bp + ggtitle("Plant growth with\ndifferent treatments")
+
+# Reduce line spacing and use bold text
+bp + ggtitle("Plant growth with\ndifferent treatments") + theme(plot.title = element_text(lineheight=.8, face="bold"))
+
+
+### Axes
+# Note: In the examples below, where it says something like scale_y_continuous, scale_x_continuous, or ylim,
+# the y can be replaced with x if you want to operate on the other axis.
+
+# This is the basic boxplot that we will work with, using the built-in PlantGrowth data set.
+bp <- ggplot(PlantGrowth, aes(x=group, y=weight)) + geom_boxplot()
+bp
+
+# Swap x and y axes (make x vertical, y horizontal):
+  bp + coord_flip()
+  
+# Discrete axis
+# Changing the order of items
+  
+# Manually set the order of a discrete-valued axis
+bp + scale_x_discrete(limits=c("trt1","trt2","ctrl"))
+  
+# Reverse the order of a discrete-valued axis
+# Get the levels of the factor
+flevels <- levels(PlantGrowth$group)
+flevels
+#> [1] "ctrl" "trt1" "trt2"
+  
+# Reverse the order
+flevels <- rev(flevels)
+flevels
+#> [1] "trt2" "trt1" "ctrl"
+  
+bp + scale_x_discrete(limits=flevels)
+  
+# Or it can be done in one line:
+bp + scale_x_discrete(limits = rev(levels(PlantGrowth$group)))
+
+# Continous axis 
+# Setting range and reversing direction of an axis
+# If you simply want to make sure that an axis includes a particular value in the range, 
+# use expand_limits(). This can only expand the range of an axis; it can’t shrink the range.
+
+# Make sure to include 0 in the y axis
+bp + expand_limits(y=0)
+
+# Make sure to include 0 and 8 in the y axis
+bp + expand_limits(y=c(0,8))
+
+# You can also explicitly set the y limits.
+# Note that if any scale_y_continuous command is used, it overrides any ylim command, and the ylim will be ignored.
+
+# Set the range of a continuous-valued axis
+# These are equivalent
+bp + ylim(0, 8)
+
+# If the y range is reduced using the method above, the data outside the range is ignored. This might be OK for a scatterplot, but it can be problematic for the box plots used here. For bar graphs, if the range does not include 0, the bars will not show at all!
+# To avoid this problem, you can use coord_cartesian instead. Instead of setting the limits of the data,
+# it sets the viewing area of the data.
+
+# These two do the same thing; all data points outside the graphing range are
+# dropped, resulting in a misleading box plot
+bp + ylim(5, 7.5)
+#> Warning: Removed 13 rows containing non-finite values (stat_boxplot).
+# bp + scale_y_continuous(limits=c(5, 7.5))
+
+# Using coord_cartesian "zooms" into the area
+bp + coord_cartesian(ylim=c(5, 7.5))
+
+# Specify tick marks directly
+bp + coord_cartesian(ylim=c(5, 7.5)) + scale_y_continuous(breaks=seq(0, 10, 0.25))  # Ticks from 0-10, every .25
+# bp + scale_y_continuous(limits=c(0, 8))
+
+### Legends
+# start with an example graph with the default options:
+bp <- ggplot(data=PlantGrowth, aes(x=group, y=weight, fill=group)) + geom_boxplot()
+bp
+
+# Removing legends
+# Use guides(fill=FALSE), replacing fill with the desired aesthetic.
+# You can also remove all the legends in a graph, using theme.
+
+# Remove legend for a particular aesthetic (fill)
+bp + guides(fill=FALSE)
+
+# It can also be done when specifying the scale
+bp + scale_fill_discrete(guide=FALSE)
+
+# This removes all legends
+bp + theme(legend.position="none")
+
+# Changing the order of the legends
+# This changes the order of items to trt1, ctrl, trt2:
+bp + scale_fill_discrete(breaks=c("trt1","ctrl","trt2"))
+
+# Reversing the order of the legends
+# To reverse the legend order:
+  
+# These two methods are equivalent:
+bp + guides(fill = guide_legend(reverse=TRUE))
+bp + scale_fill_discrete(guide = guide_legend(reverse=TRUE))
+
+### Using scales
+# You can also modify the scale directly:
+bp + scale_fill_discrete(breaks = rev(levels(PlantGrowth$group)))
+
+# The legend can be a guide for fill, colour, linetype, shape, or other aesthetics.
+# With fill and color
+# Because group, the variable in the legend, is mapped to the color fill,
+# it is necessary to use scale_fill_xxx, where xxx is a method of mapping each factor level of group 
+# to different colors. The default is to use a different hue on the color wheel for each factor level,
+# but it is also possible to manually specify the colors for each level.
+
+bp + scale_fill_discrete(name="Experimental\nCondition")
+
+bp + scale_fill_discrete(name="Experimental\nCondition", breaks=c("ctrl", "trt1", "trt2"),labels=c("Control", "Treatment 1", "Treatment 2"))
+
+# Using a manual scale instead of hue
+bp + scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9"), name="Experimental\nCondition",breaks=c("ctrl", "trt1", "trt2"),labels=c("Control", "Treatment 1", "Treatment 2"))
+
+# If you use a line graph, you will probably need to use scale_colour_xxx and/or scale_shape_xxx instead of scale_fill_xxx. 
+# colour maps to the colors of lines and points, while fill maps to the color of area fills. shape maps to the shapes of points.
+# We’ll use a different data set for the line graphs here because the PlantGrowth data set does not work well with a line graph.
+
+# A different data set
+df1 <- data.frame(sex = factor(c("Female","Female","Male","Male")), time = factor(c("Lunch","Dinner","Lunch","Dinner"), levels=c("Lunch","Dinner")), total_bill = c(13.53, 16.81, 16.24, 17.42))
+
+# A basic graph
+lp <- ggplot(data=df1, aes(x=time, y=total_bill, group=sex, shape=sex)) + geom_line() + geom_point()
+lp
+
+# Change the legend
+lp + scale_shape_discrete(name  ="Payer",breaks=c("Female", "Male"),labels=c("Woman", "Man"))
+
+# If you use both colour and shape, they both need to be given scale specifications. Otherwise there will be two two separate legends.
+
+# Specify colour and shape
+lp1 <- ggplot(data=df1, aes(x=time, y=total_bill, group=sex, shape=sex, colour=sex)) + geom_line() + geom_point()
+lp1
+
+# Here's what happens if you just specify colour
+lp1 + scale_colour_discrete(name  ="Payer",breaks=c("Female", "Male"),labels=c("Woman", "Man"))
+
+# Specify both colour and shape
+lp1 + scale_colour_discrete(name  ="Payer",breaks=c("Female", "Male"),labels=c("Woman", "Man")) +scale_shape_discrete(name  ="Payer", breaks=c("Female", "Male"),labels=c("Woman", "Man"))
+
+# # Basic line graph
+ggplot(data=dat, aes(x=time, y=total_bill, group=1)) + geom_line()
+## This would have the same result as above
+# ggplot(data=dat, aes(x=time, y=total_bill)) +
+#     geom_line(aes(group=1))
+
+# Add points
+ggplot(data=dat, aes(x=time, y=total_bill, group=1)) + geom_line() + geom_point()
+
+# Change color of both line and points
+# Change line type and point type, and use thicker line and larger points
+# Change points to circles with white fill
+ggplot(data=dat, aes(x=time, y=total_bill, group=1)) + geom_line(colour="red", linetype="dashed", size=1.5) + geom_point(colour="red", size=4, shape=21, fill="white")
+
+# Change the y-range to go from 0 to the maximum value in the total_bill column,
+# and change axis labels
+ggplot(data=dat, aes(x=time, y=total_bill, group=1)) + geom_line() +geom_point() + expand_limits(y=0) + xlab("Time of day") + ylab("Total bill") + ggtitle("Average bill for 2 people")
+
+### Graphs with more variables
+dat1 <- data.frame( sex = factor(c("Female","Female","Male","Male")), time = factor(c("Lunch","Dinner","Lunch","Dinner"), levels=c("Lunch","Dinner")), total_bill = c(13.53, 16.81, 16.24, 17.42))
+dat1
+#>      sex   time total_bill
+#> 1 Female  Lunch      13.53
+#> 2 Female Dinner      16.81
+#> 3   Male  Lunch      16.24
+#> 4   Male Dinner      17.42
+
+### Bar Graphs
+# Stacked bar graph -- this is probably not what you want
+ggplot(data=dat1, aes(x=time, y=total_bill, fill=sex)) + geom_bar(stat="identity")
+
+# Bar graph, time on x-axis, color fill grouped by sex -- use position_dodge()
+ggplot(data=dat1, aes(x=time, y=total_bill, fill=sex)) + geom_bar(stat="identity", position=position_dodge())
+
+ggplot(data=dat1, aes(x=time, y=total_bill, fill=sex)) + geom_bar(stat="identity", position=position_dodge(), colour="black")
+
+# Change colors
+ggplot(data=dat1, aes(x=time, y=total_bill, fill=sex)) + geom_bar(stat="identity", position=position_dodge(), colour="black") + scale_fill_manual(values=c("#999999", "#E69F00"))
+
+# It’s easy to change which variable is mapped the x-axis and which is mapped to the fill.
+
+# Bar graph, time on x-axis, color fill grouped by sex -- use position_dodge()
+ggplot(data=dat1, aes(x=sex, y=total_bill, fill=time)) + geom_bar(stat="identity", position=position_dodge(), colour="black")
+
+# These are the variable mappings used here:
+# time: x-axis
+# sex: line color
+# total_bill: y-axis.
+# To draw multiple lines, the points must be grouped by a variable; otherwise all points will be connected by a single line. 
+# In this case, we want them to be grouped by sex.
+
+# Basic line graph with points
+ggplot(data=dat1, aes(x=time, y=total_bill, group=sex)) + geom_line() + geom_point()
+
+# Map sex to color
+ggplot(data=dat1, aes(x=time, y=total_bill, group=sex, colour=sex)) + geom_line() + geom_point()
+
+# Map sex to different point shape, and use larger points
+ggplot(data=dat1, aes(x=time, y=total_bill, group=sex, shape=sex)) + geom_line() + geom_point()
+
+
+# Use thicker lines and larger points, and hollow white-filled points
+ggplot(data=dat1, aes(x=time, y=total_bill, group=sex, shape=sex)) +  geom_line(size=1.5) +  geom_point(size=3, fill="white") + scale_shape_manual(values=c(22,21))
+
+# It’s easy to change which variable is mapped the x-axis and which is mapped to the color or shape.
+ggplot(data=dat1, aes(x=sex, y=total_bill, group=time, shape=time, color=time)) + geom_line() + geom_point()
+
+### With a numeric x-axis
+# When the variable on the x-axis is numeric, it is sometimes useful to treat it as continuous, and sometimes useful to 
+# treat it as categorical. In this data set, the dose is a numeric variable with values 0.5, 1.0, and 2.0.
+# It might be useful to treat these values as equal categories when making a graph.
+
+datn <- read.table(header=TRUE, text='
+                   supp dose length
+                   OJ  0.5  13.23
+                   OJ  1.0  22.70
+                   OJ  2.0  26.06
+                   VC  0.5   7.98
+                   VC  1.0  16.77
+                   VC  2.0  26.14
+                   ')
+
+### With x-axis treated as continuous
+# A simple graph might put dose on the x-axis as a numeric value. 
+# It is possible to make a line graph this way, but not a bar graph.
+
+ggplot(data=datn, aes(x=dose, y=length, group=supp, colour=supp)) + geom_line() + geom_point()
+
+### With x-axis treated as categorical
+
+# If you wish to treat it as a categorical variable instead of a numeric one, 
+# it must be converted to a factor. This can be done by modifying the data frame, 
+# or by changing the specification of the graph.
+
+# Copy the data frame and convert dose to a factor
+datn2 <- datn
+datn2$dose <- factor(datn2$dose)
+ggplot(data=datn2, aes(x=dose, y=length, group=supp, colour=supp)) + geom_line() + geom_point()
+
+# Use the original data frame, but put factor() directly in the plot specification
+ggplot(data=datn, aes(x=factor(dose), y=length, group=supp, colour=supp)) + geom_line() + geom_point()
+
+### It is also possible to make a bar graph when the variable is treated as categorical rather than numeric.
+
+# Use datn2 from above
+ggplot(data=datn2, aes(x=dose, y=length, fill=supp)) +  geom_bar(stat="identity", position=position_dodge())
+
+# Use the original data frame, but put factor() directly in the plot specification
+ggplot(data=datn, aes(x=factor(dose), y=length, fill=supp)) + geom_bar(stat="identity", position=position_dodge())

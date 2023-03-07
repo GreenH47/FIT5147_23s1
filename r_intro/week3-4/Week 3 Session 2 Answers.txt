@@ -1,0 +1,204 @@
+Title: "Module 1  Introduction to R - Week 3 Session 2."
+Author: "Doogan, C.(2017)."
+Date: "June 2017."
+
+# Go ahead and run the following, so you do not have to re-do everything previously.
+
+# "Module 1  Introduction to R - Week 1 Working with Data Summary."
+### Install packages
+install.packages("dplyr")
+install.packages("ggplot2")
+library(dplyr)
+library(ggplot2)
+
+### Read data
+ti_train<- read.csv("titanic_train_week1.csv",na.strings=c("NA","NaN", ""), header = TRUE, sep=",")
+ti_test<- read.csv("titanic_test_week1.csv",na.strings=c("NA","NaN", ""), header = TRUE, sep = ",")
+
+### Investigating the  data frame
+# Train data
+str(ti_train)
+summary(ti_train)
+# Test data
+str(ti_train)
+summary(ti_test)
+
+### Resolving mismatched variable length
+colnames_check <- colnames(ti_train) %in% colnames(ti_test) 
+colnames(ti_train[colnames_check==FALSE])
+# 'Survived' was printed, this means that survived is the missing variable in the test set. 
+
+### Check for NA's
+# training data
+ti_train[!complete.cases(ti_train),]
+ti_test[!complete.cases(ti_test),]
+
+### Addressing 'Cabin' NA's
+# training data
+ti_train<- select(ti_train, -Cabin)
+head(ti_train)
+# testing data
+ti_test<- select(ti_test, -Cabin)
+head(ti_test)
+
+### Addressing ' Age' NA's
+# training data
+ti_train$Age[is.na(ti_train$Age)] <- mean(ti_train$Age, na.rm = TRUE)
+dplyr::filter(ti_train, is.na(Age))
+# testing data
+ti_test$Age[is.na(ti_test$Age)] <- mean(ti_test$Age, na.rm = TRUE)
+dplyr::filter(ti_test, is.na(Age))
+
+### Addressing ' Embarked' NA's
+# training data
+prop.table(table(ti_train$Embarked))
+ti_train$Embarked <- replace(ti_train$Embarked, which(is.na(ti_train$Embarked)), 'S')
+sum(is.na(ti_train$Embarked))
+# testing data
+prop.table(table(ti_test$Embarked))
+ti_test$Embarked <- replace(ti_test$Embarked, which(is.na(ti_test$Embarked)), 'S')
+sum(is.na(ti_test$Embarked))
+
+### Addressing 'Fare' NA's
+# testing data
+ti_test$Fare[is.na(ti_test$Fare)] <- mean(ti_test$Fare, na.rm = TRUE)
+dplyr::filter(ti_test, is.na(Fare))
+
+# Now we will do some data exploration.....with ggplot2
+
+# First we will check in on how many people survived. To refresh our memory.
+table(ti_train$Survived)
+#   0   1 
+# 549 342 
+
+# To see this as a proportion:
+survived_all<-filter(ti_train,Survived==1)
+# We know how to see this information using head()
+head(survived_all)
+
+# To view survived as a proportion
+prop.table(table(ti_train$Survive))
+# 0         1 
+# 0.6161616 0.3838384
+
+# Challenge 1: Do you think that this indicates that the survival rate was random? Why?
+#  Answer: 
+# 61% of passengers died. If it were random, it would probably be closer to 50% survived, and 50% died. 
+# So without even looking at some more statistically sound methods
+# we can say that the survival rate is not due to chance. 
+
+# We should look further into what is going on.
+# head() didn't give us much information. We could try summary()
+summary(survived_all)
+# That is a lot better. Now we know that:
+# 233 females survived, and 109 males survived. 
+# The mean age of survival was 28, the youngest was a baby, and the oldest was 80.
+# The mean number of  siblings a surviving passenger had was 0.47 
+# and the median class that people who survived were 2.
+
+
+# Some of these results are surprising, so require further explanation. 
+# Challenge 2: Why is this method for summarising what variable impact survival be wrong?
+# Answer:
+# We only know the raw values, not the proportions to the number of people who did not survive. 
+
+# Challenge 3: Calculate the proportion of passangers surviving in each class.
+# Answer:
+prop.table(table(ti_train$Pclass, ti_train$Survived),1)
+# 1st Class 62.9%
+# 2nd Class 47.3%
+# 3rd Class 24.2%
+
+# Not to get an idea of the proportion of survived:Died for the variable class we can do a split bar graph like so.
+# First create factors
+total <- ti_train
+total$Pclass <- factor(total$Pclass)
+levels(total$Pclass) <- c("First Class", "Second Class", "Third Class")
+total$Survived <- factor(total$Survived)
+# Now plot per factor
+ggplot(total, aes(Pclass)) + geom_bar(aes(fill = Survived)) + ggtitle("Class as the Survival Factor")
+
+# Did 62.9% of 1st class passengers seem small to you?
+# Since the fare is related to the class, 
+# we should see if the fare impacts the impact of survival within the classes.
+# It is often easier to graph this. 
+# Using qplot to graph these proportions. 
+# qplot is a quick version of ggplot2.
+qplot(Age, Fare, data=ti_train, colour=as.factor(Sex))
+# It looks like the fare effects the passenger survival, particularly in the 1st class. 
+# This is our first hint that there are relationships between variables. We will note this for further exploration later.
+
+# Now lets look at the sex variable. 
+# Challenge 4: Find the proportion of survived:died for sex
+# Answer:
+prop.table(table(ti_train$Sex, ti_train$Survived),1)
+# Female 74.2%
+# Male 18.9%
+
+# Challenge 5: Plot the proportion of survived for each sex.
+# Answer:
+# First create factors
+total_sex <- ti_train
+total_sex$Sex <- factor(total_sex$Sex)
+levels(total_sex$Sex) <- c("First Class", "Second Class", "Third Class")
+total_sex$Survived <- factor(total_sex$Survived)
+# Now plot per factor
+ggplot(total, aes(Sex)) + geom_bar(aes(fill = Survived)) + ggtitle("Sex as the Survival Factor")
+
+# Let's have a  look at age.
+# Challenge 6: Examine the proportions of survived: died for the Age variable.
+# Answer:
+prop.table(table(ti_train$Age, ti_train$Survived),1)
+# Why was this unhelpful?
+
+# This is what can happen when you look at continous data on a bar graph.
+barchart_Age <- ggplot(ti_train, aes(as.factor(Age), fill=as.factor(Survived)))+geom_bar()
+
+barchart_Age+xlab("Passenger Age")+ylab("Number of Passengers")+ggtitle("Survival by Age")+scale_fill_discrete(name = "", labels = c("Died", "Survived"))
+# Maybe it's the the messiness of the x-axis.
+# Remove the numbers
+barchart_Age+ scale_x_discrete(name = "Age", breaks = NULL)
+
+# With continous data it is oftern easier to grooup the vales into initervals. 
+# Here, we group the passangers by junouirs (under 14),Aductkts (14> but <40) and sesniors (>40).
+# Add the variable of age group to differentiate juniors and seniors
+total$AgeG <- ifelse(total$Age > 14 | is.na(total$Age), 2, 1)
+total$AgeG <- ifelse(total$Age < 40 | is.na(total$Age), total$AgeG, 3)
+total$AgeG <- factor(total$AgeG)
+levels(total$AgeG) <- c("Junior", "Adult", "Senior")
+ggplot(total, aes(AgeG)) + geom_bar(aes(fill = Survived)) + ggtitle("Age as the Survival Factor")
+
+# Have a look at the family size as the survival factor.
+ggplot(total, aes(factor(SibSp + Parch + 1))) + 
+  geom_bar(aes(fill = Survived)) + 
+  facet_wrap(~Sex+Pclass, nrow = 2, scales = "free") + 
+  ggtitle("Family Size as the Survival Factor")
+
+
+# Challenge 7: Family size is another variable that we should catagorise. 
+# Catagorise the family size by adding the SibSp to the Parch variable.
+# Answer:
+# *Hint* use a similar process to catgorising age.
+total$FamilySize <- ifelse((total$SibSp + total$Parch + 1) == 1, 1, 2)
+total$FamilySize <- ifelse((total$SibSp + total$Parch + 1) >= 4, 3, total$FamilySize)
+total$FamilySize <- factor(total$FamilySize)
+levels(total$FamilySize) <- c("Alone", "SFamily", "BFamily")
+
+
+# Time to start analysisng the relationship between variables.
+# Lets look at Age and sex together. 
+ggplot(na.omit(total), aes(Age)) + 
+  geom_histogram(aes(fill = Survived), binwidth = 2) + 
+  facet_wrap(~Sex+Pclass, nrow = 2, scales = "free_y") + 
+  ggtitle("Age as the Survival Factor")
+
+ggplot(total, aes(x = SibSp + Parch + 1, y = Fare)) + 
+  geom_jitter(aes(colour = Survived)) + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~Sex+Pclass, nrow = 2, scales = "free") + 
+  labs(x = "Family Member Count", y = "Group Fare", title = "Fare: Associated with Family Size")
+
+
+
+
+

@@ -145,7 +145,10 @@ length(matrix_example) # 18
 # 2. matrix(c(4, 9, 10, 1, 5, 7), ncol = 2, byrow = TRUE)
 # 3. matrix(c(4, 9, 10, 1, 5, 7), nrow = 3)
 # 4. matrix(c(4, 1, 9, 5, 10, 7), ncol = 2, byrow = TRUE)
-
+matrix(c(4, 1, 9, 5, 10, 7), nrow = 3)
+matrix(c(4, 9, 10, 1, 5, 7), ncol = 2, byrow = TRUE)
+matrix(c(4, 9, 10, 1, 5, 7), nrow = 3)
+matrix(c(4, 1, 9, 5, 10, 7), ncol = 2, byrow = TRUE)
 
 matrix(c(4, 1, 9, 5, 10, 7), ncol = 2, byrow = TRUE)
 # [,1] [,2]

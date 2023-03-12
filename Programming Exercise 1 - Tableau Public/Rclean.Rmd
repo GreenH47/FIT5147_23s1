@@ -1,0 +1,23 @@
+```{r}
+install.packages('tidyverse')
+install.packages('dplyr')
+install.packages('lubridate')
+install.packages('stringr')
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(stringr)
+```
+
+```{r}
+df <- read.csv("PE1_frog_data.csv")
+```
+
+```{r}
+df$Time_Start <- ymd_hms(df$Time_Start)
+```
+
+

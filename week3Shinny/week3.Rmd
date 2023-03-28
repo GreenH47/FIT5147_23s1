@@ -1,0 +1,537 @@
+
+```{r}
+# Shiny example
+library(shiny) 
+runExample("01_hello")
+```
+
+Structure of a Shiny App
+Shiny apps usually have two components (two files in the same folder):
+
+[ui.R] a user-interface script. This creates the visual elements and controls the layout and appearance of the Shiny app
+[server.R] a server script. This assembles inputs into outputs and provides instructions on how to build the visual objects to show with the page.
+With the above built-in example, it only shows one file app.R. However, to make the structure of an application easier to understand, we split it into two parts in the following explanations. We have the UI function:
+```{r}
+# ui.R
+library(shiny)
+ 
+# Define UI for application that draws a histogram
+shinyUI(fluidPage(
+ 
+  # Application title
+  titlePanel("Hello Shiny!"),
+ 
+  # Sidebar with a slider input for the number of bins
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("bins",
+                  "Number of bins:",
+                  min = 1,
+                  max = 50,
+                  value = 30)
+    ),
+ 
+    # Show a plot of the generated distribution
+    mainPanel(
+      plotOutput("distPlot")
+    )
+  )
+))
+```
+
+So ui.R tells Shiny what to show and where to display the output objects and now we can provide instructions on how to build those objects in server.R. Following is the server code in the running example
+```{r}
+# server.R
+library(shiny)
+
+# Define server logic required to draw a histogram
+shinyServer(function(input, output) {
+ 
+  # Expression that generates a histogram. The expression is
+  # wrapped in a call to renderPlot to indicate that:
+  #
+  #  1) It is "reactive" and therefore should be automatically
+  #     re-executed when inputs change
+  #  2) Its output type is a plot
+ 
+  output$distPlot <- renderPlot({
+    x    <- faithful[, 2]  # Old Faithful Geyser data
+    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+ 
+    # draw the histogram with the specified number of bins
+    hist(x, breaks = bins, col = 'darkgray', border = 'white')
+  })
+})
+```
+Place these two files in the same folder with the correct file names. To run the Shiny App use the ‘> Run App’ menu (above either file, as shown below)
+
+Interaction between ui.R and server.R
+
+Input: we can create a list of elements for gathering dynamic user input in the ui script. The value of the input can be used in the server function when constructing the output object. In the running example, the following code (line 12; ui.R), specifies an input variable “bins”.
+
+`sliderInput("bins",`
+
+The value of “bins” gathered from the user is then used to specify the number of bins in the histogram in the server function (line 16; server.R)
+
+`bins <- seq(min(x), max(x), length.out = input$bins + 1)`
+
+Output: We can also add output objects to the user-interface in ui.R.
+
+For example, the code file below (line 22; ui.R) uses `plotOutput` to add a reactive plot to the main panel of the Shiny app pictured above.
+```
+# Show a plot of the generated distribution
+mainPanel(
+  plotOutput("distPlot")
+)
+```
+Notice that the function `plotOutput` takes an argument, the character string `“distPlot”`, this is the name of the reactive element.
+
+Then in the server function, we tell shiny how to construct this object. In the running example, the following code (line 14-20; server.R) specifies the value of `“distPlot”`, which essentially is a histogram.
+```
+output$distPlot <- renderPlot({
+  x    <- faithful[, 2]  # Old Faithful Geyser data
+  bins <- seq(min(x), max(x), length.out = input$bins + 1)
+ 
+  # draw the histogram with the specified number of bins
+  hist(x, breaks = bins, col = 'darkgray', border = 'white')
+})
+```
+It is important to note that the object name you specified in server.R must match the reactive element name created in ui.R. In the script above, `output$distPlot` matches `plotOutput("distPlot")` in your ui.R script.
+
+
+another shinny app with same ui.r Shiny with ggplot
+```{r}
+library(shiny)
+library(datasets)
+library(ggplot2)
+
+# Define server logic required to plot various variables against mpg
+shinyServer(function(input, output) {
+  
+  # Return the formula text for printing as a caption
+  output$caption <- renderText({
+    paste("mpg ~", input$variable)
+  })
+  
+  # Generate a plot of the requested variable against mpg and only 
+  # include outliers if requested
+  output$mpgPlot <- renderPlot({
+    
+    # Check for the input variable
+    if (input$variable == "am") {
+      # am
+      mpgData <- data.frame(mpg = mtcars$mpg, 
+                            var = factor(mtcars[[input$variable]], 
+                                         labels = c("Automatic", "Manual")))
+    } else {
+      # cyl and gear
+      mpgData <- data.frame(mpg = mtcars$mpg, 
+                            var = factor(mtcars[[input$variable]]))
+    }
+    
+    p <- ggplot(mpgData, aes(var, mpg)) + 
+      geom_boxplot(outlier.size = ifelse(input$outliers, 2, NA)) + 
+      xlab(input$variable)
+    
+    print(p)
+  })
+  
+})
+
+```
+
+
+
+sets up the user interface of the Shiny app, including the header panel, sidebar panel, and plot output area
+```{r}
+# Load the required packages
+library(shiny)
+library(ggplot2)
+# Define the app's user interface using fluidPage and sidebarLayout functions
+ui <- fluidPage(
+  headerPanel("Miles per gallon box plots"), # Set the title of the app
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("myVariable", "Variable:", choices = names(mtcars)[-1]), # Set the dropdown menu for variable selection
+      checkboxInput("chkOutliers", "Show outliers", value = F) # Set the checkbox to show/hide outliers
+    ),
+    mainPanel(
+      plotOutput("myPlot") # Set the plot output area
+    )
+  )
+)
+```
+
+Next, we need to define the server logic and create a reactive dataset to render a plot. The server function defines the reactive dataset, my_df. The dataset includes the miles per gallon and the variable chosen by the user from the dropdown menu. `output$myPlot` renders the plot output based on the reactive dataset, my_df, and the user inputs (`input$chkOutliers` and `input$myVariable`). We use ggplot to create a boxplot with geom_boxplot and set the size of the outliers using outlier.size.
+```{r}
+# Define the server logic for the Shiny app
+server <- function(input, output) {
+  
+  # Define a reactive dataset to generate the plot
+  my_df <- reactive({
+    data.frame(
+      mpg = mtcars[, "mpg"],
+      my_var = as.factor(mtcars[, input$myVariable]) # Select the variable chosen by the user
+    )
+  })
+  
+  # Define the plot output using ggplot and render it with plotOutput
+  output$myPlot <- renderPlot({
+    ggplot(data=my_df(), aes(y=mpg, x=my_var)) +
+      geom_boxplot(outlier.size = ifelse(input$chkOutliers, 5, 0)) # Add boxplot to plot output based on user inputs
+  })
+}
+
+```
+
+run the Shiny app
+```{r}
+# Run the Shiny app
+shinyApp(ui, server)
+```
+
+
+other way  
+ ggvis is from the makers of ggplot. It aims to make it easy to build interactive graphics for exploratory data analysis
+```{r}
+install.packages("ggvis")
+```
+
+```{r}
+library(ggvis)
+p <- ggvis(mtcars, x = ~hp, y = ~mpg)
+layer_points(p)
+```
+
+```{r}
+layer_points(ggvis(mtcars, x = ~hp, y = ~mpg))
+```
+
+
+```{r}
+mtcars %>%
+  ggvis(x = ~hp, y = ~mpg) %>%
+  layer_points()
+```
+
+
+```{r}
+mtcars %>% 
+  ggvis(~wt, ~mpg, 
+    size := input_slider(10, 100),
+    opacity := input_slider(0, 1)
+  ) %>% 
+  layer_points()
+
+```
+
+“Plotly was built using Python and the Django framework, with a front end using JavaScript and the visualization library D3.js, HTML and CSS. Files are hosted on Amazon S3” – it is well worth a look, has APIs for R & Python, also libraries, also tools to convert plots.
+
+Yet another way to have interactive graphs in plots tab (not ‘Viewer’) in R is this:
+```{r}
+install.packages("manipulate")
+```
+
+
+```{r}
+library(manipulate)
+manipulate(plot(1:x), x = slider(1, 100))
+manipulate(
+  plot(
+    cars, xlim = c(0, x.max), 
+    type = type, ann = label, col=col, pch=pch, cex=cex
+  ),
+  x.max = slider(10, 25, step=5, initial = 25), 
+  type = picker("Points" = "p", "Line" = "l", "Step" = "s"), 
+  label = checkbox(TRUE, "Draw Labels"), 
+  col=picker("red"="red", "green"="green", "yellow"="yellow"), 
+  pch = picker("1"=1,"2"=2,"3"=3, "4"=4, "5"=5, "6"=6,"7"=7,
+    "8"=8, "9"=9, "10"=10,"11"=11, "12"=12,"13"=13, "14"=14, 
+    "15"=15, "16"=16, "17"=17, "18"=18,"19"=19,"20"=20, 
+    "21"=21,"22"=22, "23"=23,"24"=24
+  ), 
+  cex=picker("1"=1,"2"=2,"3"=3, "4"=4, 
+    "5"=5,"6"=6,"7"=7,"8"=8, "9"=9, "10"=10
+  )
+)
+# pch is styles x 24
+# cex is size x 10
+# 3 types: point, line, bar
+# 3 colours
+```
+
+
+Activity: Clustering with Rthis:
+
+
+```{r}
+library(ggplot2)
+# the four measures of irises, width &amp;amp; length + species
+head(iris)
+# remove the 5th column from the dataset which contains the name of the species - 
+# so there's no 'cheating'# from this point on 'irises' is our version of the 
+# origianl 'iris' data, so species is unknown..
+irises <- iris[-5]
+# and display
+head(irises)
+
+
+```
+
+
+
+```{r}
+# get the species names
+species_labels = iris[,5] 
+# a library with nice colors, install it if you do not have
+library(colorspace) 
+# get a color for each record according to its specie
+species_col = rev(rainbow_hcl(3))[as.numeric(species_labels)] 
+
+```
+
+
+
+```{r}
+pairs(irises, col = species_col,
+      lower.panel = NULL,
+      cex.labels=2, pch=19, cex = 1.2)
+```
+
+
+
+```{r}
+# Create a new plotting window
+plot.new()
+
+# Draw the legend
+par(xpd = TRUE)
+legend(x = 0.05, y = 0.4, cex = 2,
+       legend = as.character(levels(species_labels)),
+       fill = unique(species_col))
+par(xpd = NA)
+
+```
+
+
+
+```{r}
+fit <- kmeans(irises, 3, nstart = 25) # 3 clusters, kinda cheating, try 2, or 4 (or 1)
+fit
+
+```
+
+
+We then add this clustering information into our data and plot it.
+```{r}
+df <- data.frame(irises)
+df$cluster <- factor(fit$cluster)
+ggplot(data = df, aes(
+  x = Sepal.Length, y = Petal.Length, color = cluster
+  )) + geom_point()
+
+```
+
+
+Compare this with the original data coloured by species (colours don’t match – sorry), we can see one separate group (‘setosa’)
+```{r}
+ggplot(data = iris, aes(
+  x = Sepal.Length, y = Petal.Length, color = Species)
+  ) + geom_point()
+```
+
+Clustering “crickets” data
+Try an unclassified data set, the far more famous ‘crickets’.
+Let’s build the data first.
+```{r}
+Names = c("Mike Hussey", "Aaron Finch", "Brad Hogg", "Steve Smith", 
+          "George Bailey", "Mitchell Johnson", "Shaun Marsh", "Glenn Maxwell", 
+          "Pat Cummins", "Mitchell Starc", "David Warner")
+# and check length
+length(Names)
+ 
+Ages = c(39,28,44,25,32,33,31,26,22,25,28)
+length(Ages)
+IPLSals = c(310,662,103,828,672,1340,455,1240,207,1030,1140)
+```
+
+Make a dataframe but dump names, calculating clusters using names makes no sense.
+```{r}
+crickets = data.frame(Names, Ages, IPLSals)
+crickets # and display
+crickets = crickets[-1]
+```
+
+
+ use kmeans again for clustering.
+```{r}
+clusters = 2  # how many clusters?? Don't know, try 2
+fit  <- kmeans(crickets, clusters, nstart = 25)
+# is this data even suitable for clustering, is there enough?
+fit
+fit$cluster
+# df <- data.frame(df)
+crickets$cluster <- factor(fit$cluster)
+```
+
+
+Plot our result.
+```{r}
+crickets$cluster <- factor(fit$cluster)
+ggplot(data = crickets, aes(x = IPLSals, y = Ages, color = cluster)) + geom_point()
+```
+
+
+ rotate it.
+```{r}
+ggplot(data = crickets, aes(y = IPLSals, x = Ages, color = cluster)) + geom_point() 
+```
+
+
+
+```{r}
+# rotate axes
+# basic cluster, black & white
+d <- dist(as.matrix(crickets))  # distance matrix, how close, or far apart are the data
+d 
+# the distance matrix, why is there no row 1? 
+# there's a big distance between 1 & 6, check the data, that's the highest & lowest Sal 
+# what would happen if salary was scaled (up or down) e.g $1M is 1,000,000 or 1.0
+
+
+# apply hierarchical clustering 
+hcc <- hclust(d)
+# and paint
+#plot(hcc)
+plot(hcc, labels = Names) # use names 
+#The four on the right are the $1M club
+
+```
+
+
+Remember the list at the beginning, there are different clustering algorithms.
+Put it all together and play around them.
+```{r}
+par(mfrow = c(2,2))
+plot(hclust(d,"com"), labels = Names) 
+plot(hclust(d,"av"), labels = Names) 
+plot(hclust(d,"sin"), labels = Names) 
+# you just have to try a mcquitty...
+plot(hclust(d,"mcq"), labels = Names) 
+# "ward.D",
+# "ward.D2",
+# "mcquitty" (= WPGMA),
+# "median" (= WPGMC) or
+# "centroid" (= UPGMC).
+```
+
+
+
+```{r}
+install.packages("dendextend")
+```
+
+
+
+```{r}
+library(colorspace)
+library(dendextend)
+par(mfrow=c(1,1))
+# get colors from thrid-party library
+cols <- rainbow_hcl(3) 
+hcc <- as.dendrogram(hcc)
+hcc <- color_branches(hcc, 3)
+plot(hcc)
+```
+
+
+
+
+```{r}
+par(mfrow=c(1,1))
+m_dist <- dist(iris, diag = FALSE)
+#  or just "com"
+m_hclust <- hclust(m_dist, method = "complete") 
+plot(m_hclust)
+```
+
+
+
+```{r}
+k = 3
+cols <- rainbow_hcl(k)
+dend <- as.dendrogram(m_hclust)
+dend <- color_branches(dend, k = k)
+ 
+plot(dend)
+ 
+labels_dend <- labels(dend)
+ 
+# cut tree to different clusters
+groups <- cutree(dend, k=k, order_clusters_as_data = FALSE) 
+dends <- list()
+for(i in 1:k) {
+  labels_to_keep <- labels_dend[i != groups]
+  dends[[i]] <- prune(dend, labels_to_keep)
+}
+ 
+par(mfrow = c(1,3))
+for(i in 1:k) { 
+  plot(dends[[i]], 
+       main = paste0("Tree number ", i))
+}
+
+```
+
+
+
+```{r}
+d_iris <- dist(irises) # method="man" # is a bit better
+hc_iris <- hclust(d_iris, method = "complete")
+iris_species <- rev(levels(iris[,5]))
+ 
+library(dendextend)
+dend <- as.dendrogram(hc_iris)
+# order it the closest we can to the order of the observations:
+dend <- rotate(dend, 1:150)
+ 
+# Color the branches based on the clusters:
+dend <- color_branches(dend, k=3) #, groupLabels=iris_species)
+ 
+# Manually match the labels, as much as possible, to the real 
+# classification of the flowers:
+labels_colors(dend) <-
+   rainbow_hcl(3)[sort_levels_values(
+      as.numeric(iris[,5])[order.dendrogram(dend)]
+   )]
+ 
+# We shall add the flower type to the labels:
+labels(dend) <- paste(as.character(iris[,5])[order.dendrogram(dend)],
+                           "(",labels(dend),")", 
+                           sep = "")
+# We hang the dendrogram a bit:
+dend <- hang.dendrogram(dend,hang_height=0.1)
+# reduce the size of the labels:
+# dend <- assign_values_to_leaves_nodePar(dend, 0.5, "lab.cex")
+dend <- set(dend, "labels_cex", 0.5)
+# And plot:
+par(mfrow=c(1,1))
+plot(dend, 
+     main = "Clustered Iris data set
+     (the labels give the true flower species)", 
+     horiz =  TRUE,  nodePar = list(cex = .007))
+legend("topleft", legend = iris_species, fill = rainbow_hcl(3))
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+

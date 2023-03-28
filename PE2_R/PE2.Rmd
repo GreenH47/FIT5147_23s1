@@ -1,0 +1,156 @@
+```{r}
+install.packages("leaflet")
+```
+
+ggplot2 map showing the latitude and longitude as points, and a leaflet map with markers on each location
+# 2 Create an interactive proportional symbol map using Leaflet that shows the spatial positions of all observed frog genera in the dataset (MAP).
+```{r}
+library(ggplot2)
+library(leaflet)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# create a basic ggplot2 map
+ggplot(frog_data, aes(x = Longitude, y = Latitude)) +
+  geom_point() +
+  theme_bw()
+
+# create a leaflet map with markers
+leaflet(frog_data) %>%
+  addTiles() %>%
+  addMarkers(lng = ~Longitude, lat = ~Latitude)
+
+```
+
+# 2.a Use the provided longitude and latitude values for each genus observed in the data to position the symbols. The longitude and latitude values must be rounded down to only 3 decimal places.
+```{r}
+library(ggplot2)
+library(leaflet)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# round the longitude and latitude values to 3 decimal places
+frog_data$Longitude <- round(frog_data$Longitude, 3)
+frog_data$Latitude <- round(frog_data$Latitude, 3)
+
+# create a basic ggplot2 map with genus symbols
+ggplot(frog_data, aes(x = Longitude, y = Latitude, color = Genus, shape = Genus)) +
+  geom_point(size = 3) +
+  theme_bw()
+
+# create a leaflet map with markers for each genus
+leaflet(frog_data) %>%
+  addTiles() %>%
+  addCircleMarkers(lng = ~Longitude, lat = ~Latitude, color = ~Genus, radius = 3)
+
+```
+
+# 2.b Provide a range selection slider to filter the number of observations in a location that is required in order for a symbol to be visible. You must allow a minimum and maximum value to be set by the slider
+```{r}
+library(ggplot2)
+library(leaflet)
+library(dplyr)
+library(shiny)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# round the longitude and latitude values to 3 decimal places
+frog_data$Longitude <- round(frog_data$Longitude, 3)
+frog_data$Latitude <- round(frog_data$Latitude, 3)
+
+# create a range selection slider for number of observations
+ui <- fluidPage(
+  sliderInput(
+    inputId = "obs_filter",
+    label = "Number of observations required for symbol to be visible:",
+    min = 1,
+    max = max(frog_data %>%
+                group_by(Longitude, Latitude) %>%
+                summarize(n = n()) %>%
+                pull(n)),
+    value = 5,
+    step = 1
+  ),
+  leafletOutput("map")
+)
+
+# create a leaflet map with markers for each genus, filtered by number of observations
+server <- function(input, output) {
+  output$map <- renderLeaflet({
+    frog_data %>%
+      group_by(Longitude, Latitude) %>%
+      summarize(n = n()) %>%
+      filter(n >= input$obs_filter) %>%
+      select(Longitude, Latitude) %>%
+      leaflet() %>%
+      addTiles() %>%
+      addCircleMarkers(lng = ~Longitude, lat = ~Latitude, radius = 3)
+  })
+}
+
+# run the Shiny app
+shinyApp(ui, server)
+
+```
+
+# c. Provide a checklist to filter which frog genera to display
+```{r}
+library(ggplot2)
+library(leaflet)
+library(dplyr)
+library(shiny)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# round the longitude and latitude values to 3 decimal places
+frog_data$Longitude <- round(frog_data$Longitude, 3)
+frog_data$Latitude <- round(frog_data$Latitude, 3)
+
+# create a range selection slider for number of observations
+# and a checklist for frog genera
+ui <- fluidPage(
+  sliderInput(
+    inputId = "obs_filter",
+    label = "Number of observations required for symbol to be visible:",
+    min = 1,
+    max = max(frog_data %>%
+                group_by(Longitude, Latitude) %>%
+                summarize(n = n()) %>%
+                pull(n)),
+    value = 5,
+    step = 1
+  ),
+  checkboxGroupInput(
+    inputId = "genus_filter",
+    label = "Select which frog genera to display:",
+    choices = unique(frog_data$Genus),
+    selected = unique(frog_data$Genus)
+  ),
+  leafletOutput("map")
+)
+
+# create a leaflet map with markers for each genus, filtered by number of observations
+# and frog genera
+server <- function(input, output) {
+  output$map <- renderLeaflet({
+    frog_data %>%
+      filter(Genus %in% input$genus_filter) %>%
+      group_by(Longitude, Latitude) %>%
+      summarize(n = n()) %>%
+      filter(n >= input$obs_filter) %>%
+      select(Longitude, Latitude) %>%
+      leaflet() %>%
+      addTiles() %>%
+      addCircleMarkers(lng = ~Longitude, lat = ~Latitude, radius = 3)
+  })
+}
+
+# run the Shiny app
+shinyApp(ui, server)
+
+```
+

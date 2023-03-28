@@ -466,6 +466,59 @@ ggplot(frog_data, aes(x = Genus, fill = Habitat)) +
   geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.5)
 
 ```
+change VIS1 into shiny app
+```{r}
+library(ggplot2)
+library(dplyr)
+library(shiny)
+# Define UI for app
+ui <- fluidPage(
+  titlePanel("FROGS Observation"),
+  mainPanel(
+    h3("Description 1:"),
+    p("This visualization shows the count of frog genera by preferred terrain."),
+    plotOutput("vis1_plot")
+  )
+)
+
+# Define server for app
+server <- function(input, output) {
+  
+  # Load data
+  frog_data <- read.csv("PE2_frog_data.csv")
+  
+  # Define color palette for habitats
+  color_palette <- c("#4daf4a", "#377eb8", "#ff7f00", "#984ea3", "#e41a1c", "#a65628")
+  
+  # Create subset of frog_data with top 3 most common genera
+  frog_data_counts <- frog_data %>%
+    group_by(Genus) %>%
+    summarise(n = n()) %>%
+    arrange(desc(n)) %>%
+    top_n(3, n)
+  
+  # Create ggplot object
+  vis1_plot <- ggplot(frog_data, aes(x = Genus, fill = Habitat)) +
+    geom_bar(position = "dodge") +
+    labs(title = "Count of Frog Genera by Preferred Terrain",
+         x = "Genus",
+         y = "Count") +
+    scale_fill_manual(name = "Preferred Terrain", values = setNames(color_palette, levels(frog_data$Habitat))) +
+    geom_text(stat = "count", aes(label = ..count..), position = position_dodge(width = 0.9), vjust = -0.5) +
+    coord_cartesian(ylim = c(0, max(frog_data_counts$n) + 10))
+  
+  # Render VIS1 plot
+  output$vis1_plot <- renderPlot({
+    vis1_plot
+  })
+}
+
+# Run app
+shinyApp(ui = ui, server = server)
+
+```
+
+
 
 ## 2. (VIS 2)Create a visualisation using ggplot2
 The dataset PE2_frog_data.csv has more columns
@@ -567,6 +620,7 @@ below the title is DES1,
 below DES1 is VIS1 and MAP with same height. VIS1 on the left and MAP on the right,
 below VIS1 and MAP is DES2,
 Below DES2 is DES3 and VIS2 with same height. DES3 on the left and VIS2 on the right,
+some function not work 
 ```{r}
 library(shiny)
 library(ggplot2)
@@ -582,6 +636,8 @@ color_palette <- rainbow(length(unique(frog_data$Genus)))
 # round the longitude and latitude values to 3 decimal places
 frog_data$Longitude <- round(frog_data$Longitude, 3)
 frog_data$Latitude <- round(frog_data$Latitude, 3)
+
+
 
 # create a range selection slider for number of observations
 # and a checklist for frog genera
@@ -701,104 +757,115 @@ shinyApp(ui = ui, server = server)
 
 ```
 
+chang
 ```{r}
-# Define the UI for the Shiny app
+library(shiny)
+library(ggplot2)
+library(leaflet)
+library(dplyr)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# set the color palette for the frog genera
+color_palette <- rainbow(length(unique(frog_data$Genus)))
+
+# round the longitude and latitude values to 3 decimal places
+frog_data$Longitude <- round(frog_data$Longitude, 3)
+frog_data$Latitude <- round(frog_data$Latitude, 3)
+
+
+
+# create a range selection slider for number of observations
+# and a checklist for frog genera
 ui <- fluidPage(
   
-  # Set the app title
-  titlePanel("FROGS Observation"),
+  # Page title
+  fluidRow(
+    column(12,
+           h1("FROGS Observation"))),
   
-  # Set the fixed layout with a sidebar and a main panel
-  fixedRow(
-    column(
-      width = 4,
-      # Add the DES1 section
-      wellPanel(
-        h4("Description 1"),
-        p("This app shows the observation data of frogs in a certain area, 
-           and allows filtering based on the number of observations and frog genera.")
-      )
-    ),
-    column(
-      width = 8,
-      # Add the VIS1 and MAP sections side-by-side
-      fluidRow(
-        column(
-          width = 6,
-          wellPanel(
-            # Add the VIS1 section
-            h4("Distribution of Observation Time"),
-            plotOutput("vis1", height = "350px")
-          )
-        ),
-        column(
-          width = 6,
-          wellPanel(
-            # Add the MAP section
-            h4("Geographic Distribution of Observations"),
-            leafletOutput("map", height = "350px")
-          )
+  # Project description
+  fluidRow(
+    column(12,
+           h4("Project Description")),
+    column(12,
+           p("{{DES1}}"))
+  ),
+  
+  # Main content
+  fluidRow(
+    # VIS1 and MAP
+    column(6,
+           h4("Count of Frog Genera and Observation Points")),
+    column(6,
+           h4("Map of Observation Locations")),
+    fluidRow(
+      column(6,
+             plotOutput("vis1_plot")),
+      column(6,
+             leafletOutput("map")),
+      column(
+        width = 6,
+        sliderInput(
+          inputId = "obs_filter",
+          label = "Number of observations required for symbol to be visible:",
+          min = 1,
+          max = max(frog_data %>%
+                      group_by(Longitude, Latitude) %>%
+                      summarize(n = n()) %>%
+                      pull(n)),
+          value = 5,
+          step = 1
+        )
+      ),
+      column(
+        width = 6,
+        checkboxGroupInput(
+          inputId = "genus_filter",
+          label = "Select which frog genera to display:",
+          choices = unique(frog_data$Genus),
+          selected = unique(frog_data$Genus)
         )
       )
-    )
-  ),
-  
-  fixedRow(
-    column(
-      width = 4,
-      # Add the DES2 section
-      wellPanel(
-        h4("Description 2"),
-        p("The map shows the geographic distribution of observations for selected frog genera, 
-           with the symbol size and color representing the number of observations.")
-      )
+      
     ),
-    column(
-      width = 8,
-      # Add the VIS2 section
-      wellPanel(
-        h4("Observation Hours for Top 4 Frog Genera"),
-        plotOutput("vis2", height = "350px")
-      )
+    
+    # DES2
+    column(12,
+           h4("Frog Frequency and Location Description")),
+    column(12,
+           p("{{DES2}}")),
+    
+    # VIS2 and DES3
+    column(6,
+           h4("Observation Hours for Top 4 Frog Genera")),
+    column(6,
+           h4("{{DES3}}")),
+    fluidRow(
+      column(6,
+             plotOutput("vis2_plot")),
+      column(6,
+             p("{{DES4}}"))
     )
-  ),
-  
-  # Add the DES3 section
-  wellPanel(
-    h4("Description 3"),
-    p("The bar chart shows the distribution of observation times for the top 4 frog genera 
-       based on the number of observations.")
   )
-  
 )
 
+# server logic
 server <- function(input, output) {
-  # load the dataset
-  frog_data <- read.csv("PE2_frog_data.csv")
   
-  # set the color palette for the frog genera
-  color_palette <- rainbow(length(unique(frog_data$Genus)))
-  
-  # round the longitude and latitude values to 3 decimal places
-  frog_data$Longitude <- round(frog_data$Longitude, 3)
-  frog_data$Latitude <- round(frog_data$Latitude, 3)
-  
-  # filter the frog_data_counts to only include the top 4 genera
-  frog_data_counts_top <- frog_data %>%
-    group_by(Genus, hour) %>%
-    summarise(count = n(), .groups = "drop") %>%
-    group_by(Genus) %>%
-    summarise(total = sum(count)) %>%
-    top_n(4) %>%
-    inner_join(frog_data_counts, by = "Genus") %>%
-    filter(Genus %in% top_genera_names)
-  
-  # render the text output for DES1
-  output$des1 <- renderText({
-    "This dashboard shows observations of different frog genera and their habitats. The observations were made by researchers during their fieldwork. Use the filters and interactive maps to explore the data."
+  # VIS1 bar chart
+  output$vis1_plot <- renderPlot({
+    ggplot(frog_data, aes(x = Genus, fill = Habitat)) +
+      geom_bar(position = "dodge") +
+      labs(title = "Count of Frog Genera by Preferred Terrain",
+           x = "Genus",
+           y = "Count") +
+      scale_fill_discrete(name = "Preferred Terrain") +
+      geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.5)
   })
   
-  # render the leaflet map for MAP
+  # MAP leaflet map
   output$map <- renderLeaflet({
     frog_data %>%
       filter(Genus %in% input$genus_filter) %>%
@@ -818,9 +885,22 @@ server <- function(input, output) {
                        labelOptions = labelOptions(noHide = FALSE))
   })
   
-  # render the bar chart for VIS1
-  output$vis1 <- renderPlot({
-    # use the same code block as in VIS1
+  # VIS2 bar chart
+  output$vis2_plot <- renderPlot({
+    frog_data_counts <- frog_data %>%
+      group_by(Genus, hour) %>%
+      summarise(count = n(), .groups = "drop")
+    
+    top_genera <- frog_data_counts %>%
+      group_by(Genus) %>%
+      summarise(total = sum(count)) %>%
+      top_n(n = 4, wt = total)
+    
+    top_genera_names <- top_genera$Genus
+    
+    frog_data_counts_top <- frog_data_counts %>%
+      filter(Genus %in% top_genera_names)
+    
     ggplot(frog_data_counts_top, aes(x = hour, y = count, fill = Genus)) +
       geom_bar(stat = "identity", position = "dodge") +
       labs(title = "Observation Hours for Top 4 Frog Genera",
@@ -830,35 +910,12 @@ server <- function(input, output) {
       scale_fill_brewer(palette="Set1") +
       theme_minimal()
   })
-  
-  # render the text output for DES2
-  output$des2 <- renderText({
-    "The map on the right shows the locations of the frog observations. You can filter by the number of observations required for a frog genus to appear and select which genera to display. Hover over a marker to see the genus name and number of observations."
-  })
-  
-  # render the bar chart for VIS2
-  output$vis2 <- renderPlot({
-    # use the same code block as in VIS2
-    ggplot(frog_data_counts_top, aes(x = hour, y = count, fill = Genus)) +
-      geom_bar(stat = "identity", position = "dodge") +
-      labs(title = "Observation Hours for Top 4 Frog Genera",
-           x = "Hour of Day",
-           y = "Count",
-           fill = "Genus") +
-      scale_fill_brewer(palette="Set1") +
-      theme_minimal()
-  })
-  
-  # render the text output for DES3
-  output$des3 <- renderText({
-    "The bar chart on the left shows the number of observations of the top 4 frog genera by hour of the day. Use the filter on the top of the page to select which genera to display. The chart shows that most observations were made during the early morning and late evening hours."
-  })
-  
 }
 
+# shiny app and server
+shinyApp(ui = ui, server = server)
 
-# Run the Shiny app
-shinyApp(ui, server)
 
 ```
+
 

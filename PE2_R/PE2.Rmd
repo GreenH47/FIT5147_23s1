@@ -609,6 +609,75 @@ ggplot(frog_data_counts_top, aes(x = hour, y = count, fill = Genus)) +
   theme_minimal()
 
 ```
+Shiny app for it
+```{r}
+library(shiny)
+library(ggplot2)
+library(dplyr)
+
+# Define UI
+ui <- fluidPage(
+  
+  # Application title
+  titlePanel("Observation Hours for Top 4 Frog Genera"),
+  
+  # Plot output
+  mainPanel(
+    plotOutput("plot")
+  )
+)
+
+# Define server
+server <- function(input, output) {
+  
+  # Load data from csv file
+  frog_data <- read.csv("PE2_frog_data.csv")
+  
+  # Prepare data for plot 
+  frog_data_counts <- reactive({
+    data <- frog_data
+    data$hour <- format(as.POSIXct(data$Time_Start), format="%H")
+    data %>%
+      group_by(Genus, hour) %>%
+      summarise(count = n(), .groups = "drop")
+    
+  })
+  
+  # Select top 4 genera based on count
+  top_genera <- reactive({
+    frog_data_counts() %>%
+      group_by(Genus) %>%
+      summarise(total = sum(count)) %>%
+      top_n(4)
+  })
+  
+  # Filter the frog_data_counts to include only the top 4 genera
+  frog_data_counts_top <- reactive({
+    frog_data_counts() %>%
+      filter(Genus %in% top_genera()$Genus)
+  })
+  
+  
+  # Create plot
+  output$plot <- renderPlot({
+    ggplot(frog_data_counts_top(), aes(x = hour, y = count, fill = Genus)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      labs(title = "Observation Hours for Top 4 Frog Genera",
+           x = "Hour of Day",
+           y = "Count",
+           fill = "Genus") +
+      scale_fill_brewer(palette="Set1") +
+      theme_minimal()
+  })
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
+```
+
+
+
 
 # Compose VIS1, VIS2, MAP, and DES1, DES2, DES3 layout
 DES1	text block about project description
@@ -757,7 +826,7 @@ shinyApp(ui = ui, server = server)
 
 ```
 
-chang
+change
 ```{r}
 library(shiny)
 library(ggplot2)
@@ -790,7 +859,7 @@ ui <- fluidPage(
     column(12,
            h4("Project Description")),
     column(12,
-           p("{{DES1}}"))
+           p("{{DES1_text}}"))
   ),
   
   # Main content
@@ -835,18 +904,20 @@ ui <- fluidPage(
     column(12,
            h4("Frog Frequency and Location Description")),
     column(12,
-           p("{{DES2}}")),
+           p("{{DES2_text}}")),
     
-    # VIS2 and DES3
+    # DES3 and VIS2
+    column(6,
+           h4("{{DES3_title}}")),
     column(6,
            h4("Observation Hours for Top 4 Frog Genera")),
-    column(6,
-           h4("{{DES3}}")),
+
     fluidRow(
       column(6,
-             plotOutput("vis2_plot")),
+             p("{{DES3_text}}")),
       column(6,
-             p("{{DES4}}"))
+             plotOutput("vis2_plot")),
+      
     )
   )
 )
@@ -886,22 +957,34 @@ server <- function(input, output) {
   })
   
   # VIS2 bar chart
-  output$vis2_plot <- renderPlot({
-    frog_data_counts <- frog_data %>%
+  # Prepare data for plot 
+  frog_data_counts <- reactive({
+    data <- frog_data
+    data$hour <- format(as.POSIXct(data$Time_Start), format="%H")
+    data %>%
       group_by(Genus, hour) %>%
       summarise(count = n(), .groups = "drop")
     
-    top_genera <- frog_data_counts %>%
+  })
+  
+  # Select top 4 genera based on count
+  top_genera <- reactive({
+    frog_data_counts() %>%
       group_by(Genus) %>%
       summarise(total = sum(count)) %>%
-      top_n(n = 4, wt = total)
-    
-    top_genera_names <- top_genera$Genus
-    
-    frog_data_counts_top <- frog_data_counts %>%
-      filter(Genus %in% top_genera_names)
-    
-    ggplot(frog_data_counts_top, aes(x = hour, y = count, fill = Genus)) +
+      top_n(4)
+  })
+  
+  # Filter the frog_data_counts to include only the top 4 genera
+  frog_data_counts_top <- reactive({
+    frog_data_counts() %>%
+      filter(Genus %in% top_genera()$Genus)
+  })
+  
+  
+  # Create plot
+  output$vis2_plot <- renderPlot({
+    ggplot(frog_data_counts_top(), aes(x = hour, y = count, fill = Genus)) +
       geom_bar(stat = "identity", position = "dodge") +
       labs(title = "Observation Hours for Top 4 Frog Genera",
            x = "Hour of Day",

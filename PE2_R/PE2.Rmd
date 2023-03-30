@@ -359,6 +359,7 @@ shinyApp(ui, server)
 ### Format the output into this layout:
 the range slider should on the top and centre align
 the checklist should on the top right conner
+
 ```{r}
 library(ggplot2)
 library(leaflet)
@@ -434,6 +435,87 @@ shinyApp(ui, server)
 
 ```
 
+```{r}
+library(ggplot2)
+library(leaflet)
+library(dplyr)
+library(shiny)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# set the color palette for the frog genera
+color_palette <- rainbow(length(unique(frog_data$Genus)))
+
+# round the longitude and latitude values to 3 decimal places
+frog_data$Longitude <- round(frog_data$Longitude, 3)
+frog_data$Latitude <- round(frog_data$Latitude, 3)
+
+# create a range selection slider for number of observations
+# and a checklist for frog genera
+ui <- fluidPage(
+  fluidRow(
+    column(
+      width = 6,
+      offset = 3,  # Add center alignment to the column
+      sliderInput(
+        inputId = "obs_filter",
+        label = "Number of observations required for symbol to be visible:",
+        min = 1,
+        max = max(frog_data %>%
+                    group_by(Longitude, Latitude) %>%
+                    summarize(n = n()) %>%
+                    pull(n)),
+        value = 5,
+        step = 1
+      )
+    )
+  ),
+  fluidRow(
+    column(
+      width = 8,
+      leafletOutput("map")
+    ),
+    column(
+      width = 4,
+      checkboxGroupInput(
+        inputId = "genus_filter",
+        label = "Select which frog genera to display:",
+        choices = unique(frog_data$Genus),
+        selected = unique(frog_data$Genus)
+      )
+    )
+  )
+)
+
+# create a leaflet map with markers for each genus, filtered by number of observations
+# and frog genera, with color and symbol size encoded to number of frogs observed
+server <- function(input, output) {
+  output$map <- renderLeaflet({
+    frog_data %>%
+      filter(Genus %in% input$genus_filter) %>%
+      group_by(Longitude, Latitude, Genus) %>%
+      summarize(n = n()) %>%
+      filter(n >= input$obs_filter) %>%
+      select(Longitude, Latitude, Genus, n) %>%
+      leaflet() %>%
+      addTiles() %>%
+      addCircleMarkers(lng = ~Longitude, lat = ~Latitude, 
+                       radius = ~sqrt(n)*3, 
+                       color = ~color_palette[match(Genus, unique(Genus))], 
+                       stroke = TRUE, 
+                       fillOpacity = 0.5, 
+                       weight = 1, 
+                       label = ~paste0("Genus name: ",Genus, "\nNumber of observations: ", n), 
+                       labelOptions = labelOptions(noHide = FALSE))
+  })
+}
+
+# run the Shiny app
+shinyApp(ui, server)
+
+```
+
 
 ## 1. Create a visualisation using ggplot2 that shows 
 count the number of observations of each frog genera based on the number of rows
@@ -466,6 +548,8 @@ ggplot(frog_data, aes(x = Genus, fill = Habitat)) +
   geom_text(stat="count", aes(label=..count..), position=position_dodge(width=0.9), vjust=-0.5)
 
 ```
+
+
 change VIS1 into shiny app
 ```{r}
 library(ggplot2)
@@ -473,7 +557,7 @@ library(dplyr)
 library(shiny)
 # Define UI for app
 ui <- fluidPage(
-  titlePanel("FROGS Observation"),
+  #titlePanel("FROGS Observation"),
   mainPanel(
     h3("Description 1:"),
     p("This visualization shows the count of frog genera by preferred terrain."),
@@ -518,6 +602,232 @@ shinyApp(ui = ui, server = server)
 
 ```
 
+
+
+VIS1 and MAP with same height. VIS1 on the left and MAP on the right
+```{r}
+library(ggplot2)
+library(leaflet)
+library(dplyr)
+library(shiny)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# Define UI for app
+ui <- fluidPage(
+  fluidRow(
+    column(6, 
+           h3("Count of Frog Genera and Observation Points:"),
+           plotOutput("vis1_plot")
+    ),
+    column(6, 
+      fluidRow(
+        column(
+          width = 6,
+          offset = 3,
+          sliderInput(
+            inputId = "obs_filter",
+            label = "Number of observations required for symbol to be visible:",
+            min = 1,
+            max = max(frog_data %>%
+                        group_by(Longitude, Latitude) %>%
+                        summarize(n = n()) %>%
+                        pull(n)),
+            value = 5,
+            step = 1
+          )
+        )
+      ),
+      fluidRow(
+        column(
+          width = 12,
+          leafletOutput("map")
+        )
+      ),
+      fluidRow(
+        column(
+          width = 12,
+          checkboxGroupInput(
+            inputId = "genus_filter",
+            label = "Select which frog genera to display:",
+            choices = unique(frog_data$Genus),
+            selected = unique(frog_data$Genus)
+          )
+        )
+      )
+    )
+  )
+)
+
+# Define server for app
+server <- function(input, output) {
+  
+  # Define color palette for habitats
+  color_palette <- c("#4daf4a", "#377eb8", "#ff7f00", "#984ea3", "#e41a1c", "#a65628")
+  
+  # Create subset of frog_data with top 3 most common genera
+  frog_data_counts <- frog_data %>%
+    group_by(Genus) %>%
+    summarise(n = n()) %>%
+    arrange(desc(n)) %>%
+    top_n(3, n)
+  
+  # Create ggplot object
+  vis1_plot <- ggplot(frog_data, aes(x = Genus, fill = Habitat)) +
+    geom_bar(position = "dodge") +
+    labs(title = "Count of Frog Genera by Preferred Terrain",
+         x = "Genus",
+         y = "Count") +
+    scale_fill_manual(name = "Preferred Terrain", values = setNames(color_palette, levels(frog_data$Habitat))) +
+    geom_text(stat = "count", aes(label = ..count..), position = position_dodge(width = 0.9), vjust = -0.5) +
+    coord_cartesian(ylim = c(0, max(frog_data_counts$n) + 10))
+  
+
+  # render VIS1 plot
+  output$vis1_plot <- renderPlot({
+    vis1_plot
+  })
+
+  # create leaflet map
+  output$map <- renderLeaflet({
+    frog_data %>%
+      filter(Genus %in% input$genus_filter) %>%
+      group_by(Longitude, Latitude, Genus) %>%
+      summarize(n = n()) %>%
+      filter(n >= input$obs_filter) %>%
+      select(Longitude, Latitude, Genus, n) %>%
+      leaflet() %>%
+      addTiles() %>%
+      addCircleMarkers(lng = ~Longitude, lat = ~Latitude, 
+                       radius = ~sqrt(n)*3, 
+                       color = ~color_palette[match(Genus, unique(Genus))], 
+                       stroke = TRUE, 
+                       fillOpacity = 0.5, 
+                       weight = 1, 
+                       label = ~paste0("Genus name: ",Genus, "\nNumber of observations: ", n), 
+                       labelOptions = labelOptions(noHide = FALSE))
+    })
+}
+
+# Run app
+shinyApp(ui = ui, server = server)
+
+```
+
+```{r}
+library(ggplot2)
+library(leaflet)
+library(dplyr)
+library(shiny)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# Define UI for app
+ui <- fluidPage(
+  fluidRow(
+    column(6, 
+           h3("Count of Frog Genera and Observation Points:"),
+           plotOutput("vis1_plot")
+    ),
+    column(6, 
+      fluidRow(
+        column(
+          width = 10,
+          sliderInput(
+            inputId = "obs_filter",
+            label = "Number of observations required for symbol to be visible:",
+            min = 1,
+            max = max(frog_data %>%
+                        group_by(Longitude, Latitude) %>%
+                        summarize(n = n(), .groups = "keep") %>%
+                        pull(n)),
+            value = 5,
+            step = 1
+          )
+        ),
+        column(
+          width = 2,
+          align = "center",
+          br(),
+          h4("Selected Genera"),
+          checkboxGroupInput(
+            inputId = "genus_filter",
+            label = "",
+            choices = unique(frog_data$Genus),
+            selected = unique(frog_data$Genus)
+          )
+        )
+      ),
+      fluidRow(
+        column(
+          width = 12,
+          leafletOutput("map")
+        )
+      )
+    )
+  )
+)
+
+# Define server for app
+server <- function(input, output) {
+  
+  # Define color palette for habitats
+  color_palette <- c("#4daf4a", "#377eb8", "#ff7f00", "#984ea3", "#e41a1c", "#a65628")
+  
+  # Create subset of frog_data with top 3 most common genera
+  frog_data_counts <- frog_data %>%
+    group_by(Genus) %>%
+    summarise(n = n()) %>%
+    arrange(desc(n)) %>%
+    top_n(3, n)
+  
+  # Create ggplot object
+  vis1_plot <- ggplot(frog_data, aes(x = Genus, fill = Habitat)) +
+    geom_bar(position = "dodge") +
+    labs(title = "Count of Frog Genera by Preferred Terrain",
+         x = "Genus",
+         y = "Count") +
+    scale_fill_manual(name = "Preferred Terrain", values = setNames(color_palette, levels(frog_data$Habitat))) +
+    geom_text(stat = "count", aes(label = ..count..), position = position_dodge(width = 0.9), vjust = -0.5) +
+    coord_cartesian(ylim = c(0, max(frog_data_counts$n) + 10))
+  
+  # render VIS1 plot
+  output$vis1_plot <- renderPlot({
+    vis1_plot
+  })
+
+  # create leaflet map
+  output$map <- renderLeaflet({
+    frog_data %>%
+      filter(Genus %in% input$genus_filter) %>%
+      group_by(Longitude, Latitude, Genus, .drop = FALSE) %>%
+      summarize(n = n(), .groups = "keep") %>%
+      filter(n >= input$obs_filter) %>%
+      select(Longitude, Latitude, Genus, n) %>%
+      leaflet() %>%
+      addTiles() %>%
+      addCircleMarkers(lng = ~Longitude, lat = ~Latitude, 
+                       radius = ~sqrt(n)*3, 
+                       color = ~color_palette[match(Genus, unique(Genus))], 
+                       stroke = TRUE, 
+                       fillOpacity = 0.5, 
+                       weight = 1, 
+                       label = ~paste0("Genus name: ",Genus, "<br>Number of observations: ", n), 
+                       labelOptions = labelOptions(noHide = FALSE)) %>%
+      addLegend(position = "topright",
+                title = "Habitat",
+                colors = setNames(color_palette, levels(frog_data$Habitat)),
+                labels = levels(frog_data$Habitat),
+                opacity = 0.5)
+    })
+}
+
+# Run app
+shinyApp(ui = ui, server = server)
+
+```
 
 
 ## 2. (VIS 2)Create a visualisation using ggplot2
@@ -852,14 +1162,14 @@ ui <- fluidPage(
   # Page title
   fluidRow(
     column(12,
-           h1("FROGS Observation"))),
+           h1("FROGS OBSERVED IN OUTER EASTERN MELBOURNE 2000-2018"))),
   
   # Project description
   fluidRow(
     column(12,
            h4("Project Description")),
     column(12,
-           p("{{DES1_text}}"))
+           p("This Project is made by Shixin Huang 31029248 for FIT5147 2023S2. "))
   ),
   
   # Main content
@@ -884,7 +1194,7 @@ ui <- fluidPage(
                       group_by(Longitude, Latitude) %>%
                       summarize(n = n()) %>%
                       pull(n)),
-          value = 5,
+          value = 1,
           step = 1
         )
       ),
@@ -904,7 +1214,7 @@ ui <- fluidPage(
     column(12,
            h4("Frog Frequency and Location Description")),
     column(12,
-           p("{{DES2_text}}")),
+           p("{{DES2_text Create a visualisation using ggplot2 that shows the number of observations made of each frog genera and their different preferred terrain (VIS 1). The visualisation should display the totals for each of the frog genera.}}")),
     
     # DES3 and VIS2
     column(6,
@@ -914,7 +1224,7 @@ ui <- fluidPage(
 
     fluidRow(
       column(6,
-             p("{{DES3_text}}")),
+             p("{{DES3_text Create a visualisation using ggplot2 that shows the number of observations made of each frog genera and their different preferred terrain (VIS 1). The visualisation should display the totals for each of the frog genera.}}")),
       column(6,
              plotOutput("vis2_plot")),
       

@@ -435,6 +435,7 @@ shinyApp(ui, server)
 
 ```
 
+
 ```{r}
 library(ggplot2)
 library(leaflet)
@@ -446,6 +447,7 @@ frog_data <- read.csv("PE2_frog_data.csv")
 
 # set the color palette for the frog genera
 color_palette <- rainbow(length(unique(frog_data$Genus)))
+genus_colors <- setNames(color_palette, unique(frog_data$Genus))
 
 # round the longitude and latitude values to 3 decimal places
 frog_data$Longitude <- round(frog_data$Longitude, 3)
@@ -502,7 +504,8 @@ server <- function(input, output) {
       addTiles() %>%
       addCircleMarkers(lng = ~Longitude, lat = ~Latitude, 
                        radius = ~sqrt(n)*3, 
-                       color = ~color_palette[match(Genus, unique(Genus))], 
+                       color = ~genus_colors[Genus],
+                       #color = ~color_palette[match(Genus, unique(Genus))], 
                        stroke = TRUE, 
                        fillOpacity = 0.5, 
                        weight = 1, 

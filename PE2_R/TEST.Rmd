@@ -1,3 +1,24 @@
+```{r}
+library(shiny)
+library(ggplot2)
+library(leaflet)
+library(dplyr)
+
+# load the dataset
+frog_data <- read.csv("PE2_frog_data.csv")
+
+# set the color palette for the frog genera
+color_palette <- rainbow(length(unique(frog_data$Genus)))
+# Define named vector of colors for each Genus
+genus_colors <- setNames(color_palette, unique(frog_data$Genus))
+
+# round the longitude and latitude values to 3 decimal places
+frog_data$Longitude <- round(frog_data$Longitude, 3)
+frog_data$Latitude <- round(frog_data$Latitude, 3)
+
+```
+
+```{r}
 library(shiny)
 library(ggplot2)
 library(leaflet)
@@ -22,7 +43,7 @@ ui <- fluidPage(
   # Project description
   fluidRow(
     column(12,
-           h4(tags$u("Project Description"))),
+           h4("Project Description")),
     column(12,
            p("This Project is made by Shixin Huang 31029248 for FIT5147 2023S2. The data set for this assignment relates to a survey of the frog population of the state of Victoria. And we shall use R base on this dataset to make an visualisation about the habit of the frog with its observation and count numbers for each genus. the number of observations made of each frog genera and their different preferred terrain. and shows the hours in which observations occurred for each of the top four frog genera"))
   ),
@@ -31,44 +52,44 @@ ui <- fluidPage(
   fluidRow(
     # VIS1 and MAP
     column(4,
-           HTML("<h4><u>Count of Frog Genera with their preferred terrain</u></h4>")),
+           h4("Count of Frog Genera with their preferred terrain")),
     column(8,
-           HTML("<h4><u>Observation Locations Map and the number</u></h4>")),
+           h4("Observation Locations Map and the number")),
     
     # create a range selection slider for number of observations
     column(
-      width = 4,
-      sliderInput(
-        inputId = "obs_filter",
-        label = "observations number range :",
-        min = 1,
-        max = max(frog_data %>%
-                    group_by(Longitude, Latitude) %>%
-                    summarize(n = n()) %>%
-                    pull(n)),
-        #value = c(1,max),
-        value = c(1, max(frog_data %>%
-                           group_by(Longitude, Latitude) %>%
-                           summarize(n = n()) %>%
-                           pull(n))),
-        #value = 1,
-        step = 1
-      )
-    ),
+        width = 4,
+        sliderInput(
+          inputId = "obs_filter",
+          label = "observations number range :",
+          min = 1,
+          max = max(frog_data %>%
+                      group_by(Longitude, Latitude) %>%
+                      summarize(n = n()) %>%
+                      pull(n)),
+          #value = c(1,max),
+          value = c(1, max(frog_data %>%
+                      group_by(Longitude, Latitude) %>%
+                      summarize(n = n()) %>%
+                      pull(n))),
+          #value = 1,
+          step = 1
+        )
+      ),
     # and a checklist for frog genera
-    column(
-      width = 4,
-      checkboxGroupInput(
-        # Set the input ID to genus_filter
-        inputId = "genus_filter", 
-        # Set the label for checkbox group
-        label = "Select which frog genera to display:",
-        # Load the unique frog genera from the frog_data column 'Genus'
-        choices = unique(frog_data$Genus), 
-        # Set the default selected frog genera as all unique frog genera
-        selected = unique(frog_data$Genus), 
-      )
-    ),
+      column(
+        width = 4,
+        checkboxGroupInput(
+          # Set the input ID to genus_filter
+          inputId = "genus_filter", 
+           # Set the label for checkbox group
+          label = "Select which frog genera to display:",
+          # Load the unique frog genera from the frog_data column 'Genus'
+          choices = unique(frog_data$Genus), 
+          # Set the default selected frog genera as all unique frog genera
+          selected = unique(frog_data$Genus), 
+        )
+      ),
     
     #  fluid row to display VIS1 plot and map
     fluidRow(
@@ -81,25 +102,24 @@ ui <- fluidPage(
     ),
     
     # DES2
-    
     column(12,
-           HTML("<h4><u>Frog Frequency and Location of Frogs</u></h4>")),
+           h4("Frog Frequency and Location of Frogs")),
     column(12,
            p("From the Plot we can see that the Crinia and Pseudophryne prefered living near water and it is true on the map. And Limnodynastes, Litoria has no specific prefered terrain and it also can be found everywhere on the map.Geocrinia only like living on land which also true base on the observation map")),
     
     # DES3 and VIS2
     column(6,
-           HTML("<h4><u>Observation times of Top 4 Frog Genera</u></h4>")),
+           h4("Observation times of Top 4 Frog Genera")),
     column(6,
-           HTML("<h4><u>Observation Hours for Top 4 Frog Genera</u></h4>")),
+           h4("Observation Hours for Top 4 Frog Genera")),
     
-    
+
     column(6,
            p("The right figure shows the hours in which observations occurred for each of the top four frog genera. From this plot we can find that the Crinia and Litoria active alround all days. And all frogs keep active from 18:00 to 20:00 and it reach the highest value for all this four kinds.")),
     column(6,
            plotOutput("vis2_plot")),
-    
-    
+      
+
   )
 )
 
@@ -109,7 +129,7 @@ server <- function(input, output) {
   # VIS1 bar chart the count of frog genera by preferred terrain
   output$vis1_plot <- renderPlot({
     ggplot(frog_data, aes(x = Genus, fill = Habitat)) +
-      # Create a stack bar chart
+       # Create a stack bar chart
       # position = "stack" - this stacks the bars on top of each other, which can be useful for showing the total value of each category.
       # position = "fill" - this fills the chart with the bars, so that each bar represents a proportion of the total value for each category.
       # position = "identity" - this leaves the bars in their original position, which is useful if you have already calculated the position of the bars manually.
@@ -132,9 +152,9 @@ server <- function(input, output) {
       
       # set the legend title and layout   
       guides(fill=guide_legend(title="Preferred Terrain", ncol=2,
-                               byrow=TRUE, label.position="top"))
+                                byrow=TRUE, label.position="top"))
   })
-  
+
   
   # round the longitude and latitude values to 3 decimal places
   frog_data$Longitude <- round(frog_data$Longitude, 3)
@@ -204,8 +224,8 @@ server <- function(input, output) {
       filter(Genus %in% top_genera()$Genus)
   })
   
-  
-  
+
+
   # Create plot
   output$vis2_plot <- renderPlot({
     ggplot(frog_data_counts_top(), aes(x = hour, y = count, fill = Genus)) +
@@ -228,3 +248,6 @@ server <- function(input, output) {
 
 # shiny app and server
 shinyApp(ui = ui, server = server)
+```
+
+

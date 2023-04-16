@@ -153,6 +153,7 @@ server <- function(input, output) {
       summarize(n = n()) %>%
       
       filter(n >= input$obs_filter[1] & n <= input$obs_filter[2]) %>%
+      #filter(n >= input$obs_filter) %>%
       
       # Filter data based on oberservations count
       select(Longitude, Latitude, Genus, n) %>%
@@ -161,27 +162,22 @@ server <- function(input, output) {
       addCircleMarkers(lng = ~Longitude, lat = ~Latitude, 
                        # Set the radius of circle markers based on square root of observation count
                        radius = ~sqrt(n)*3, 
-                       # Set the fill color of circle markers using the Genus column
-                       fillColor = ~color_palette[match(Genus, unique(Genus))], 
-                       # Circle marker has a border
+                       #col = ~color,
+                       #color = ~color[match(Genus, unique(Genus))],
+                       #color = ~genus_colors[match(Genus, unique(Genus))],
+                       color = ~color_palette[match(Genus, unique(Genus))], 
+                       #color = ~genus_colors，
+                       # circle marker has a border
                        stroke = TRUE, 
-                       # Opacity of the fill color inside the circle marker
+                       #  opacity of the fill color inside the circle marker.
                        fillOpacity = 0.5, 
-                       # Thickness of the border of the circle marker
+                       # thickness of the border of the circle marker.
                        weight = 1, 
+                       
                        # Set the label text for each marker
                        label = ~paste0("Genus name: ",Genus, "\nNumber of observations: ", n), 
-                       labelOptions = labelOptions(noHide = FALSE),
-                       # Group data by genus and fill color for use in legend
-                       group = ~paste(Genus, color_palette[match(Genus, unique(Genus))], sep = "|")) %>%
-      addLegend(position = "bottomright", 
-                colors = ~leaflet::distinct(input$x$data$input$group), 
-                labels = ~leaflet::distinct(Genus), 
-                title = "Genus", 
-                opacity = 1, 
-                withGroups = TRUE)
+                       labelOptions = labelOptions(noHide = FALSE))
   })
-  
   
   # VIS2 bar chart
   # Prepare data for plot 

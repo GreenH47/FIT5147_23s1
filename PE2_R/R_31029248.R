@@ -173,13 +173,7 @@ server <- function(input, output) {
                        label = ~paste0("Genus name: ",Genus, "\nNumber of observations: ", n), 
                        labelOptions = labelOptions(noHide = FALSE),
                        # Group data by genus and fill color for use in legend
-                       group = ~paste(Genus, color_palette[match(Genus, unique(Genus))], sep = "|")) %>%
-      addLegend(position = "bottomright", 
-                colors = ~leaflet::distinct(input$x$data$input$group), 
-                labels = ~leaflet::distinct(Genus), 
-                title = "Genus", 
-                opacity = 1, 
-                withGroups = TRUE)
+                       group = ~paste(Genus, color_palette[match(Genus, unique(Genus))], sep = "|"))
   })
   
   

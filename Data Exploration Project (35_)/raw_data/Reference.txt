@@ -1,0 +1,11 @@
+fifa-world-cup-2022-UTC.csv
+https://fixturedownload.com/results/fifa-world-cup-2022
+
+Fifa_world_cup_matches.csv
+https://www.kaggle.com/datasets/die9origephit/fifa-world-cup-2022-complete-dataset?resource=download
+
+group_stats.csv
+team_data.csv
+team_tips.json
+https://www.kaggle.com/datasets/swaptr/fifa-world-cup-2022-statistics
+

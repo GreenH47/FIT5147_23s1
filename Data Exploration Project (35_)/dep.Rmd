@@ -1,0 +1,747 @@
+```{r}
+install.packages("openxlsx")
+
+```
+
+```{r}
+install.packages("reshape2")
+
+```
+
+# Where does the majority of the game happen
+```{r}
+library(tidyverse)
+library(readxl)
+
+# Load the files into dataframes
+combined_pass <- read_excel("data_clean/combined_Pass.xlsx")
+combined_attack <- read_excel("data_clean/combined_attack.xlsx")
+
+# Select the relevant columns and rename them
+pass_data <- combined_pass %>%
+  select(Touch_Defend, Touch_Middle, Touch_Attck) %>%
+  rename("Defensive Third" = Touch_Defend,
+         "Middle Third" = Touch_Middle,
+         "Final Third" = Touch_Attck)
+
+attack_data <- combined_attack %>%
+  select(Attack_Left, Attack_middle, Attack_right) %>%
+  rename("Left side" = Attack_Left,
+         "Middle side" = Attack_middle,
+         "Right side" = Attack_right)
+
+# Calculate the sum of each column
+pass_sum <- pass_data %>% summarise(across(everything(), sum))
+attack_sum <- attack_data %>% summarise(across(everything(), sum))
+
+# Reshape the data for plotting
+pass_sum <- pass_sum %>% pivot_longer(cols = everything(), names_to = "Location", values_to = "Touches")
+attack_sum <- attack_sum %>% pivot_longer(cols = everything(), names_to = "Location", values_to = "Attacks")
+
+# Create a bar chart for the pass data
+pass_plot <- ggplot(pass_sum, aes(x = Location, y = Touches, fill = Location)) +
+             geom_bar(stat = "identity") +
+             labs(title = "Total Passes average per game by Location", y = "Total Passes", x = "Location") +
+             scale_fill_brewer(palette = "Paired")
+
+# Create a bar chart for the attack data
+attack_plot <- ggplot(attack_sum, aes(x = Location, y = Attacks, fill = Location)) +
+               geom_bar(stat = "identity") +
+               labs(title = "Total Attacks pass average per game  by Location", y = "Total Attacks", x = "Location") +
+               scale_fill_brewer(palette = "Paired")
+
+# Display the plots
+print(pass_plot)
+print(attack_plot)
+
+ggsave("data_plot/pass_plot.png", plot = pass_plot, width = 6, height = 4)
+ggsave("data_plot/attack_plot.png", plot = attack_plot, width = 6, height = 4)
+
+```
+#  which area is most dangerous for the defense?
+# by angle
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data
+attack_data <- read.xlsx("data_clean/combined_attack.xlsx", sheet = 1, startRow = 1)
+
+# Calculate average values
+avg_left <- mean(attack_data$Shot_left)
+avg_middle <- mean(attack_data$Shot_middle)
+avg_right <- mean(attack_data$Shot_right)
+
+# Create a data frame for plotting
+avg_df <- data.frame(location = c("Left", "Middle", "Right"), 
+                     average = c(avg_left, avg_middle, avg_right))
+
+# Create the plot
+shot_angle <- ggplot(data = avg_df, aes(x = location, y = average, fill = location)) +
+  geom_bar(stat = "identity", color = "black", alpha = .8) +
+  ggtitle("Average Shots Taken of all teams by Angle") +
+  xlab("Shot Location") +
+  ylab("Average Shots per game") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        axis.title = element_text(size = 14, face = "bold"),
+        axis.text = element_text(size = 12),
+        legend.position = "none") +
+  geom_text(aes(label = round(average, 2)), vjust = -0.5, size = 4)
+
+print(shot_angle)
+ggsave("data_plot/shot_angle.png", plot = shot_angle, width = 6, height = 4)
+```
+
+#  which area is most dangerous for the defense?
+# by range
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data
+attack_data <- read.xlsx("data_clean/combined_attack.xlsx", sheet = 1, startRow = 1)
+
+# Calculate average values
+avg_left <- mean(attack_data$Shot_in_6_yard_box)
+avg_middle <- mean(attack_data$Shot_in_18_yard_box)
+avg_right <- mean(attack_data$Shot_outsie_box)
+
+# Create a data frame for plotting
+avg_df <- data.frame(location = c("Goal", "Penalty", "Out of Box"), 
+                     average = c(avg_left, avg_middle, avg_right))
+
+# Create the plot
+shot_range <- ggplot(data = avg_df, aes(x = location, y = average, fill = location)) +
+  geom_bar(stat = "identity", color = "black", alpha = .8) +
+  ggtitle("Average Shots Taken of all teams by Location") +
+  xlab("Shot Location") +
+  ylab("Average Shots per game") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        axis.title = element_text(size = 14, face = "bold"),
+        axis.text = element_text(size = 12),
+        legend.position = "none") +
+  geom_text(aes(label = round(average, 2)), vjust = -0.5, size = 4)
+
+print(shot_range)
+ggsave("data_plot/shot_range.png", plot = shot_range, width = 6, height = 4)
+```
+
+
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data
+attack_data <- read.xlsx("data_clean/combined_attack.xlsx", sheet = 1, startRow = 1)
+
+# Calculate average values
+avg_left <- mean(attack_data$Shot_in_6_yard_box)
+avg_middle <- mean(attack_data$Shot_in_18_yard_box)
+avg_right <- mean(attack_data$Shot_outsie_box)
+
+# Create a data frame for plotting
+avg_df <- data.frame(location = c("Goal", "Penalty", "Out of Box"), 
+                     average = c(avg_left, avg_middle, avg_right))
+
+# Create the plot
+ggplot(data = avg_df, aes(x = "", y = average, fill = location)) +
+  geom_bar(width = 1, stat = "identity", color = "white") +
+  coord_polar(theta = "y") +
+  ggtitle("Average Shots Taken of all teams by Location") +
+  xlab("") +
+  ylab("") +
+  theme_void() +
+  theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        legend.position = c(0.85, 0.85),
+        legend.title = element_blank(),
+        panel.grid = element_blank()) +
+  scale_fill_brewer(palette = "Set1")
+
+
+```
+
+# Which match statistics (like pass completion rates, successful dribbles, and interceptions) does Croatia Team do better than other
+# from attck
+# search all columns from combined_attack.xlsx in Croatia row. compare the value with the average. put the value larger than average in positive and lower than average value columns in negative.
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data for Combined Attack
+attack_data <- read.xlsx("data_clean/combined_attack.xlsx", sheet = 1, startRow = 1)
+
+# Find Croatia's row
+croatia_row <- attack_data[attack_data$Team == "Croatia", ]
+
+# Calculate average values
+avg_values <- colMeans(attack_data[, -1])
+
+# Calculate differences between Croatia's values and averages
+differences <- croatia_row[, -1] - avg_values
+
+# Create a named vector of values
+diff_vector <- setNames(differences, colnames(attack_data[, -1]))
+
+# Calculate the percentage difference
+percentage_diff <- round((differences / avg_values) * 100, 1)
+
+# Create a named vector of values
+diff_vector <- setNames(percentage_diff , colnames(attack_data[, -1]))
+
+
+
+# Create a data frame for plotting
+diff_df <- data.frame(statistic = names(diff_vector),
+                      difference = as.numeric(diff_vector))
+
+# Create the plot
+Croatia_attack <- ggplot(data = diff_df, aes(x = statistic, y = difference, fill = difference > 0)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = c("red", "green"), name = "Difference") +
+  geom_hline(yintercept = 0, color = "black", size = 1) +
+  ggtitle("Croatia's Attack Statistics to the Average percentage") +
+  xlab("") +
+  ylab("Difference from Average (%)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey", linetype = "dashed", size = 0.5),
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_rect(fill = NA, colour = "black", size = 1),
+        plot.background = element_rect(fill = "#F0F0F0"),
+        plot.margin = unit(c(1, 2, 1, 1), "mm")) +
+  coord_flip() +
+  labs(fill = "Difference")
+
+
+print(Croatia_attack)
+ggsave("data_plot/Croatia_attack.png", plot = Croatia_attack, width = 6, height = 4)
+```
+
+# from Defend
+# search all columns from combined_Defend.xlsx in Croatia row. compare the value with the average. put the value larger than average in positive and lower than average value columns in negative.
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data for Combined Attack
+attack_data <- read.xlsx("data_clean/combined_Defend.xlsx", sheet = 1, startRow = 1)
+
+# Find Croatia's row
+croatia_row <- attack_data[attack_data$Team == "Croatia", ]
+
+# Calculate average values
+avg_values <- colMeans(attack_data[, -1])
+
+# Calculate differences between Croatia's values and averages
+differences <- croatia_row[, -1] - avg_values
+
+# Create a named vector of values
+diff_vector <- setNames(differences, colnames(attack_data[, -1]))
+
+# Calculate the percentage difference
+percentage_diff <- round((differences / avg_values) * 100, 1)
+
+# Create a named vector of values
+diff_vector <- setNames(percentage_diff , colnames(attack_data[, -1]))
+
+# Create a data frame for plotting
+diff_df <- data.frame(statistic = names(diff_vector),
+                      difference = as.numeric(diff_vector))
+
+# Create the plot
+Croatia_defend <- ggplot(data = diff_df, aes(x = statistic, y = difference, fill = difference > 0)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = c("red", "green"), name = "Difference") +
+  geom_hline(yintercept = 0, color = "black", size = 1) +
+  ggtitle("Croatia's Defend Statistics to the Average percentage") +
+  xlab("") +
+  ylab("Difference from Average (%)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey", linetype = "dashed", size = 0.5),
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_rect(fill = NA, colour = "black", size = 1),
+        plot.background = element_rect(fill = "#F0F0F0"),
+        plot.margin = unit(c(1, 2, 1, 1), "mm")) +
+  coord_flip() +
+  labs(fill = "Difference")
+
+
+print(Croatia_defend)
+ggsave("data_plot/Croatia_defend.png", plot = Croatia_defend, width = 6, height = 4)
+```
+
+
+
+
+# from Pass
+# search all columns from combined_Pass.xlsx in Croatia row. compare the value with the average. put the value larger than average in positive and lower than average value columns in negative.
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data for Combined Attack
+attack_data <- read.xlsx("data_clean/combined_Pass.xlsx", sheet = 1, startRow = 1)
+
+# Find Croatia's row
+croatia_row <- attack_data[attack_data$Team == "Croatia", ][, -1]
+
+# Calculate average values
+avg_values <- colMeans(attack_data[, -1])
+
+# Calculate differences between Croatia's values and averages
+differences <- croatia_row - avg_values
+
+# Create a named vector of values
+diff_vector <- setNames(differences, colnames(attack_data[, -1]))
+
+# Calculate the percentage difference
+percentage_diff <- round((differences / avg_values) * 100, 1)
+
+# Create a named vector of values
+diff_vector <- setNames(percentage_diff , colnames(attack_data[, -1]))
+
+# Create a data frame for plotting
+diff_df <- data.frame(statistic = names(diff_vector),
+                      difference = as.numeric(diff_vector))
+
+# Create the plot
+Croatia_pass <- ggplot(data = diff_df, aes(x = statistic, y = difference, fill = difference > 0)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = c("red", "green"), name = "Difference") +
+  geom_hline(yintercept = 0, color = "black", size = 1) +
+  ggtitle("Croatia's Pass Statistics to the Average percentage") +
+  xlab("") +
+  ylab("Difference from Average (%)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey", linetype = "dashed", size = 0.5),
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_rect(fill = NA, colour = "black", size = 1),
+        plot.background = element_rect(fill = "#F0F0F0"),
+        plot.margin = unit(c(1, 2, 1, 1), "mm")) +
+  coord_flip() +
+  labs(fill = "Difference")
+
+print(Croatia_pass)
+ggsave("data_plot/Croatia_pass.png", plot = Croatia_pass, width = 6, height = 4)
+
+```
+.
+
+# Which match statistics (like pass completion rates, successful dribbles, and interceptions) does Belgium Team do better than other
+# from attck
+# search all columns from combined_attack.xlsx in Belgium row. compare the value with the average. put the value larger than average in positive and lower than average value columns in negative.
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data for Combined Attack
+attack_data <- read.xlsx("data_clean/combined_attack.xlsx", sheet = 1, startRow = 1)
+
+# Find Croatia's row
+croatia_row <- attack_data[attack_data$Team == "Belgium", ]
+
+# Calculate average values
+avg_values <- colMeans(attack_data[, -1])
+
+# Calculate differences between Croatia's values and averages
+differences <- croatia_row[, -1] - avg_values
+
+# Create a named vector of values
+diff_vector <- setNames(differences, colnames(attack_data[, -1]))
+
+# Calculate the percentage difference
+percentage_diff <- round((differences / avg_values) * 100, 1)
+
+# Create a named vector of values
+diff_vector <- setNames(percentage_diff , colnames(attack_data[, -1]))
+
+
+
+# Create a data frame for plotting
+diff_df <- data.frame(statistic = names(diff_vector),
+                      difference = as.numeric(diff_vector))
+
+# Create the plot
+Belgium_attack <- ggplot(data = diff_df, aes(x = statistic, y = difference, fill = difference > 0)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = c("red", "green"), name = "Difference") +
+  geom_hline(yintercept = 0, color = "black", size = 1) +
+  ggtitle("Belgium's Attack Statistics to the Average percentage") +
+  xlab("") +
+  ylab("Difference from Average (%)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey", linetype = "dashed", size = 0.5),
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_rect(fill = NA, colour = "black", size = 1),
+        plot.background = element_rect(fill = "#F0F0F0"),
+        plot.margin = unit(c(1, 2, 1, 1), "mm")) +
+  coord_flip() +
+  labs(fill = "Difference")
+
+
+print(Belgium_attack)
+ggsave("data_plot/Belgium_attack.png", plot = Belgium_attack, width = 6, height = 4)
+```
+
+# from Defend
+# search all columns from combined_Defend.xlsx in Croatia row. compare the value with the average. put the value larger than average in positive and lower than average value columns in negative.
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data for Combined Attack
+attack_data <- read.xlsx("data_clean/combined_Defend.xlsx", sheet = 1, startRow = 1)
+
+# Find Croatia's row
+croatia_row <- attack_data[attack_data$Team == "Belgium", ]
+
+# Calculate average values
+avg_values <- colMeans(attack_data[, -1])
+
+# Calculate differences between Croatia's values and averages
+differences <- croatia_row[, -1] - avg_values
+
+# Create a named vector of values
+diff_vector <- setNames(differences, colnames(attack_data[, -1]))
+
+# Calculate the percentage difference
+percentage_diff <- round((differences / avg_values) * 100, 1)
+
+# Create a named vector of values
+diff_vector <- setNames(percentage_diff , colnames(attack_data[, -1]))
+
+# Create a data frame for plotting
+diff_df <- data.frame(statistic = names(diff_vector),
+                      difference = as.numeric(diff_vector))
+
+# Create the plot
+Belgium_defend <- ggplot(data = diff_df, aes(x = statistic, y = difference, fill = difference > 0)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = c("red", "green"), name = "Difference") +
+  geom_hline(yintercept = 0, color = "black", size = 1) +
+  ggtitle("Belgium's Defend Statistics to the Average percentage") +
+  xlab("") +
+  ylab("Difference from Average (%)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey", linetype = "dashed", size = 0.5),
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_rect(fill = NA, colour = "black", size = 1),
+        plot.background = element_rect(fill = "#F0F0F0"),
+        plot.margin = unit(c(1, 2, 1, 1), "mm")) +
+  coord_flip() +
+  labs(fill = "Difference")
+
+
+print(Belgium_defend)
+ggsave("data_plot/Belgium_defend.png", plot = Belgium_defend, width = 6, height = 4)
+```
+
+
+# from Pass
+# search all columns from combined_Pass.xlsx in Belgium row. compare the value with the average. put the value larger than average in positive and lower than average value columns in negative.
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+
+# Read data for Combined Attack
+attack_data <- read.xlsx("data_clean/combined_Pass.xlsx", sheet = 1, startRow = 1)
+
+# Find Croatia's row
+croatia_row <- attack_data[attack_data$Team == "Belgium", ][, -1]
+
+# Calculate average values
+avg_values <- colMeans(attack_data[, -1])
+
+# Calculate differences between Croatia's values and averages
+differences <- croatia_row - avg_values
+
+# Create a named vector of values
+diff_vector <- setNames(differences, colnames(attack_data[, -1]))
+
+# Calculate the percentage difference
+percentage_diff <- round((differences / avg_values) * 100, 1)
+
+# Create a named vector of values
+diff_vector <- setNames(percentage_diff , colnames(attack_data[, -1]))
+
+# Create a data frame for plotting
+diff_df <- data.frame(statistic = names(diff_vector),
+                      difference = as.numeric(diff_vector))
+
+# Create the plot
+Belgium_pass <- ggplot(data = diff_df, aes(x = statistic, y = difference, fill = difference > 0)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = c("red", "green"), name = "Difference") +
+  geom_hline(yintercept = 0, color = "black", size = 1) +
+  ggtitle("Belgium's Pass Statistics to the Average percentage") +
+  xlab("") +
+  ylab("Difference from Average (%)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.y = element_text(size = 6),
+        axis.text.y = element_text(size = 6),
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey", linetype = "dashed", size = 0.5),
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_rect(fill = NA, colour = "black", size = 1),
+        plot.background = element_rect(fill = "#F0F0F0"),
+        plot.margin = unit(c(1, 2, 1, 1), "mm")) +
+  coord_flip() +
+  labs(fill = "Difference")
+
+
+print(Belgium_pass)
+ggsave("data_plot/Belgium_pass.png", plot = Belgium_pass, width = 6, height = 4)
+```
+
+
+
+
+#  Did teams who scored more goals have a higher chance of winning the tournament? 
+```{r}
+# Load libraries
+library(openxlsx)
+library(dplyr)
+library(ggplot2)
+
+# Read team_data.xlsx file
+team_data <- read.xlsx("data_clean/team_data.xlsx", sheet = 1, startRow = 1)
+
+# Filter the data frame to select only columns games, goals_per90, and xg_per90
+team_data_filtered <- select(team_data, games, goals_per90, xg_per90)
+
+# Group the data frame by games and summarize the mean of goals_per90 and xg_per90 for each group
+team_data_summary <- group_by(team_data_filtered, games) %>%
+  summarize(mean_goals_per90 = mean(goals_per90),
+            mean_xg_per90 = mean(xg_per90))
+
+# Create the plot
+ggplot(team_data_summary, aes(x = games, y = mean_goals_per90, group = 1)) +
+  geom_line(color = "red", size = 1.5) +
+  geom_line(aes(y = mean_xg_per90), color = "blue", size = 1.5) +
+  ggtitle("Goals per 90 vs xG per 90 based on games") +
+  xlab("Number of Games Played") +
+  ylab("Mean Goals per 90 / xG per 90") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 10),
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_rect(fill = NA, colour = "black", size = 1),
+        plot.background = element_rect(fill = "#F0F0F0"),
+        plot.margin = unit(c(1, 1, 1, 1), "cm"))
+
+# Save the plot
+ggsave("data_plot/goals_vs_xg.png", type = "cairo", dpi = 300, width = 6, height = 4, units = "in")
+
+```
+another version
+```{r}
+# Load libraries
+library(openxlsx)
+library(dplyr)
+library(ggplot2)
+
+# Read the team data
+team_data <- read.xlsx("data_clean/team_data.xlsx", sheet = 1)
+
+# Select games, goals per 90, and xg per 90 columns
+selected_cols <- team_data %>% select(games, goals_per90, xg_per90)
+
+# Calculate the average goals_per90 and xg_per90 for each value of games
+avg_vals <- selected_cols %>% group_by(games) %>% summarize(avg_goals_per90 = mean(goals_per90, na.rm = TRUE), avg_xg_per90 = mean(xg_per90, na.rm = TRUE)) 
+
+# Create a plot of avg_goals_per90 and avg_xg_per90 for each value of games
+ggplot(avg_vals, aes(x = games, y = avg_goals_per90, group = 1)) + 
+  geom_line(color = "blue") + 
+  geom_point(size = 2, color = "blue") +
+  geom_line(aes(y = avg_xg_per90), color = "red") +
+  geom_point(aes(y = avg_xg_per90), size = 2, color = "red") +
+  labs(x = "Games", y = "Per 90 Average", title = "Per 90 averages for games played") + 
+  scale_x_continuous(breaks = seq(0, max(avg_vals$games), by = 2)) +
+  scale_y_continuous(limits = c(0, max(max(avg_vals$avg_goals_per90), max(avg_vals$avg_xg_per90))) * 1.1) + 
+  theme_classic()
+
+```
+third version
+```{r}
+# Load libraries
+library(openxlsx)
+library(dplyr)
+library(ggplot2)
+
+# Read the team data
+team_data <- read.xlsx("data_clean/team_data.xlsx", sheet = 1)
+
+# Select team, games, goals per 90, and xg per 90 columns
+selected_cols <- team_data %>% select(team, games, goals_per90, xg_per90)
+
+# Filter the rows where games = 3
+filtered_data <- selected_cols %>% filter(games == 3)
+
+# Select the team, goals per 90, and xg per 90 columns
+plot_data <- filtered_data %>% select(team, goals_per90, xg_per90)
+
+# Create a plot of goals_per90 and xg_per90 for each team
+ggplot(plot_data, aes(x = goals_per90, y = xg_per90, label = team)) + 
+  geom_point() + 
+  geom_text() +
+  labs(x = "Goals per 90", y = "xG per 90", title = "Goals per 90 vs xG per 90 for 3 games played") + 
+  theme_classic()
+
+```
+fourth version
+```{r}
+# Load libraries
+library(openxlsx)
+library(dplyr)
+library(ggplot2)
+
+# Read the team data
+team_data <- read.xlsx("data_clean/team_data.xlsx", sheet = 1)
+
+# Select team, games, goals per 90, and xg per 90 columns
+selected_cols <- team_data %>% select(team, games, goals_per90, xg_per90)
+
+# Filter the rows where games = 3, 4, 5, and 7
+filtered_data <- selected_cols %>%
+  filter(games %in% c(3, 4, 5, 7))
+
+# Select the team, goals per 90, and xg per 90 columns
+plot_data <- filtered_data %>% select(team, games, goals_per90, xg_per90)
+
+# Create a plot of goals_per90 and xg_per90 for each team
+ggplot(plot_data, aes(x = goals_per90, y = xg_per90, label = team, col = as.factor(games))) + 
+  geom_point(size = 3) + 
+  geom_text(size = 3, nudge_x = 0.2, nudge_y = 0.2) + 
+  labs(x = "goals per game", y = "Expected goals per game", title = "Goals and Expected per game") +
+  labs(col="Match")+
+  scale_color_manual(values = c("#00FF00", "#808080", "#FF0000", "#0000FF"),
+                     breaks = c(3, 4, 5, 7), 
+                     labels = c("3 games", "4 games", "5 games", "7 games")) +
+  theme_classic()
+
+
+# Save the plot
+ggsave("data_plot/goals_vs_xg.png", type = "cairo", dpi = 300, width = 6, height = 4, units = "in")
+```
+
+
+# which factors take the matter with scored?
+
+# detect if two columns have linear realtion
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+library(tidyverse)
+library(reshape2)
+
+# Read the XLSX file
+data <- read.xlsx("data_clean/team_data.xlsx")
+
+# Select the two columns you want to analyze
+selected_cols <- data[, c("shots_per90", "shots_on_target_per90", "shots_free_kicks","gk_pens_allowed", "corner_kicks","errors", "goals")]
+
+ggplot(melt(selected_cols, id.vars = "goals"), aes(x = value, y = goals)) +
+  geom_point() +
+  facet_grid(variable ~ ., scales = "free") +
+  labs(title = "Linear Regression Analysis of goals per90") +
+  theme_bw()
+
+```
+
+```{r}
+# Load libraries
+library(openxlsx)
+library(ggplot2)
+library(tidyverse)
+library(reshape2)
+
+# Read the XLSX file
+data <- read.xlsx("data_clean/team_data.xlsx")
+
+# Select the two columns you want to analyze
+selected_cols <- data[, c("shots_per90", "shots_on_target_per90", "shots_free_kicks", "gk_pens_allowed", "corner_kicks","sca_passes_dead", "goals_per90")]
+
+# Create a scatter plot for each column
+ggplot(melt(selected_cols, id.vars = "goals_per90"), aes(x = value, y = goals_per90)) +
+  geom_point() +
+  facet_wrap(~ variable, scales = "free") +
+  labs(x = "", y = "Team Goals per game", title = "Variable may related to Goals per game") +
+  theme_bw() +
+  ggtitle("Variable may related to Goals per game") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10, angle = 90, vjust = 0.5),
+        strip.text = element_text(size = 10, face = "bold"))
+
+# Save the plot
+ggsave("data_plot/goals_linear.png", type = "cairo", dpi = 300, width = 6, height = 4, units = "in")
+```
+
+
+
+
+
+

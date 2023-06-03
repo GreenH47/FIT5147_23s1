@@ -58,6 +58,8 @@ ggsave("data_plot/pass_plot.png", plot = pass_plot, width = 6, height = 4)
 ggsave("data_plot/attack_plot.png", plot = attack_plot, width = 6, height = 4)
 
 ```
+
+
 #  which area is most dangerous for the defense?
 # by angle
 ```{r}

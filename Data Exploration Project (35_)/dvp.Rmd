@@ -4,6 +4,9 @@ library(shiny)
 library(tidyverse)
 library(readxl)
 
+# Load the files into dataframes
+  combined_pass <- read_excel("data_clean/combined_Pass.xlsx")
+  combined_attack <- read_excel("data_clean/combined_attack.xlsx")
 
 # Define UI
 ui <- fluidPage(
@@ -14,7 +17,14 @@ ui <- fluidPage(
       selectInput(inputId = "PassingAttackingTeam", 
                   label = "Select team:",
                   choices = c("Total",
-                              sort(unique(c(combined_pass$Team, combined_attack$Team))))),
+                              sort(
+                                unique(
+                                  c(
+                                    combined_pass$Team, combined_attack$Team)
+                                  )
+                                )
+                              )
+                  ),
       # No other inputs are needed in this example
     ),
 
@@ -25,15 +35,15 @@ ui <- fluidPage(
       )
     )
   )
+  
+  
 )
 
 
 # Define server
 server <- function(input, output) {
 
-  # Load the files into dataframes
-  combined_pass <- read_excel("data_clean/combined_Pass.xlsx")
-  combined_attack <- read_excel("data_clean/combined_attack.xlsx")
+  
 
   # Define the reactive function for team selection
   selected_team <- reactive({
@@ -133,6 +143,8 @@ shinyApp(ui = ui, server = server)
 
 
 
+
+
 #  Did teams who scored more goals have a higher chance of winning the tournament? 
 ```{r}
 library(shiny)
@@ -199,6 +211,7 @@ server <- function(input, output) {
     team <- unique(nearPointData$team)
     goals <- unique(nearPointData$goals_per90)
     xg <- unique(nearPointData$xg_per90)
+    team_select <- unique(nearPointData$team)
     paste("Team: ", team, 
           ", Goals per game: ", goals, 
           ", Expected goals per game: ", xg)
@@ -229,6 +242,7 @@ attack_data <- read.xlsx("data_clean/combined_attack.xlsx", sheet = 1, startRow 
 
 # Define UI
 ui <- fluidPage(
+  
 
   # Application title
   titlePanel("Average Shots Taken by Team"),
@@ -324,6 +338,10 @@ server <- function(input, output) {
             legend.position = "none") +
       geom_text(aes(label = round(average, 2)), vjust = -0.5, size = 4)
   })
+  
+  
+  
+  
 }
 
 
@@ -333,4 +351,470 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 
 ```
+
+
+
+# scatter plot and bar chart
+```{r}
+library(shiny)
+library(openxlsx)
+library(dplyr)
+library(ggplot2)
+
+attack_data <- read.xlsx("data_clean/combined_attack.xlsx", sheet = 1, startRow = 1)
+# Read the team data
+team_data <- read.xlsx("data_clean/team_data.xlsx", sheet = 1)
+  
+# Define UI
+ui <- fluidPage(
+  
+  fluidRow(
+    column(6,
+           titlePanel("Goals and Expected per game")),
+    column(6,
+           titlePanel("Average Shots Taken by Team"))
+  ),
+  
+  fluidRow(
+    column(width = 6, plotOutput("goalsVsXgPlot", click = "plotClick"), verbatimTextOutput("clickedPoint")),
+    
+    column(width = 6, 
+      tabsetPanel(
+        tabPanel("By Angle", plotOutput("shotAnglePlot")),
+        tabPanel("By Location", plotOutput("shotRangePlot"))
+      )
+    )
+  ),
+
+
+
+)
+
+server <- function(input, output) {
+  
+  # Select team, games, goals per 90, and xg per 90 columns
+  selected_cols <- team_data %>% select(team, games, goals_per90, xg_per90)
+
+  # Filter the rows where games = 3, 4, 5, and 7
+  filtered_data <- selected_cols %>%
+    filter(games %in% c(3, 4, 5, 7))
+
+  # Select the team, goals per 90, and xg per 90 columns
+  plot_data <- filtered_data %>% select(team, games, goals_per90, xg_per90)
+
+  # Create a plot of goals_per90 and xg_per90 for each team
+  output$goalsVsXgPlot <- renderPlot({
+    
+    ggplot(plot_data, aes(x = goals_per90, y = xg_per90, label = team, col = as.factor(games))) + 
+      geom_point(size = 3) + 
+      geom_text(size = 3, nudge_x = 0.2, nudge_y = 0.2) +
+      labs(x = "goals per game", y = "Expected goals per game", title = "Goals and Expected per game") +
+      labs(col="Match")+
+      scale_color_manual(values = c("#228B22", "#BDB76B", "#FF0000", "#0000FF"),
+                         breaks = c(3, 4, 5, 7), 
+                         labels = c("3 games", "4 games", "5 games", "7 games")) +
+      theme_classic()
+  })
+
+  # Handle clicks on the plot
+  
+  # Define reactive variable to store team selection
+  teamSelect <- reactiveVal()
+  
+  output$clickedPoint <- renderPrint({
+    click <- input$plotClick
+    if (is.null(click)){
+      return()
+    }
+    nearPointData <- nearPoints(plot_data, click, allRows = FALSE, maxpoints = 1)
+    if (nrow(nearPointData) == 0) {
+      return()
+    }
+    team <- unique(nearPointData$team)
+    goals <- unique(nearPointData$goals_per90)
+    xg <- unique(nearPointData$xg_per90)
+    #teamSelect <- unique(nearPointData$team)
+    teamSelect(unique(nearPointData$team))
+    paste("Team: ", team, 
+          ", Goals per game: ", goals, 
+          ", Expected goals per game: ", xg)
+  })
+  
+  
+  
+  
+  # Create the plot by angle
+  output$shotAnglePlot <- renderPlot({
+    
+    # Get the selected team
+    teamSelect <- ifelse(is.null(teamSelect()), "Average", teamSelect())
+    
+    #if (input$teamSelect == "Average")
+    if (teamSelect == "Average") {
+      avg_left_angle <- mean(attack_data$Shot_left)
+      avg_middle_angle <- mean(attack_data$Shot_middle)
+      avg_right_angle <- mean(attack_data$Shot_right)
+    } else {
+      team_data <- attack_data[attack_data$Team == teamSelect,]
+      avg_left_angle <- mean(team_data$Shot_left)
+      avg_middle_angle <- mean(team_data$Shot_middle)
+      avg_right_angle <- mean(team_data$Shot_right)
+    }
+    
+    
+    # Create a data frame for plotting by angle
+    avg_df_angle <- data.frame(location = c("Left", "Middle", "Right"), 
+                           average = c(avg_left_angle, avg_middle_angle, avg_right_angle))
+    
+    
+    ggplot(data = avg_df_angle, aes(x = location, y = average, fill = location)) +
+      geom_bar(stat = "identity", color = "black", alpha = .8) +
+      ggtitle(teamSelect," Team Average Shots Taken by Angle") +
+      xlab("Shot Location") +
+      ylab("Average Shots per game") +
+      theme_minimal() +
+      theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+            axis.title = element_text(size = 14, face = "bold"),
+            axis.text = element_text(size = 12),
+            legend.position = "none") +
+      geom_text(aes(label = round(average, 2)), vjust = -0.5, size = 4)
+  })
+  
+  
+  
+  # Create the plot by location
+  output$shotRangePlot <- renderPlot({
+    
+    # Get the selected team
+    teamSelect <- ifelse(is.null(teamSelect()), "Average", teamSelect())
+    
+    # Calculate average values by location
+    # if (input$teamSelect == "Average") 
+    if (teamSelect == "Average") {
+      avg_left_location <- mean(attack_data$Shot_in_6_yard_box)
+      avg_middle_location <- mean(attack_data$Shot_in_18_yard_box)
+      avg_right_location <- mean(attack_data$Shot_outsie_box)
+    } else {
+      team_data <- attack_data[attack_data$Team == teamSelect,]
+      avg_left_location <- mean(team_data$Shot_in_6_yard_box)
+      avg_middle_location <- mean(team_data$Shot_in_18_yard_box)
+      avg_right_location <- mean(team_data$Shot_outsie_box)
+    }
+    
+    # Create a data frame for plotting by location
+    avg_df_location <- data.frame(location = c("Goal", "Penalty", "Out of Box"), 
+                               average = c(avg_left_location, avg_middle_location, avg_right_location))
+    
+    ggplot(data = avg_df_location, aes(x = location, y = average, fill = location)) +
+      geom_bar(stat = "identity", color = "black", alpha = .8) +
+      ggtitle(teamSelect,"Team Average Shots Taken by Location") +
+      xlab("Shot Location") +
+      ylab("Average Shots per game") +
+      theme_minimal() +
+      theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+            axis.title = element_text(size = 14, face = "bold"),
+            axis.text = element_text(size = 12),
+            legend.position = "none") +
+      geom_text(aes(label = round(average, 2)), vjust = -0.5, size = 4)
+  })
+
+
+  
+  
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+```
+
+
+
+# from Defend
+# search all columns from combined_Defend.xlsx in Croatia row. compare the value with the average. put the value larger than average in positive and lower than average value columns in negative.
+```{r}
+
+library(shiny)
+library(openxlsx)
+library(ggplot2)
+library(ggrepel)
+library(plotly)
+
+# Read data for Combined Attack
+combined_Defend <- read.xlsx("data_clean/combined_Defend.xlsx", sheet = 1, startRow = 1)
+
+# Define UI for application
+ui <- fluidPage(
+
+  fluidRow(
+    column(8, align = "center", h1("Defend Statistics as Radar Plot")),
+    column(4, align = "right", selectInput("radar_team", "Select a team:",
+                                           choices = unique(combined_Defend$Team)))
+  ),
+  
+  hr(),
+  
+  # Show a plot of the selected team's defend statistics
+  fluidRow(
+    column(6, plotlyOutput("defend_radar_plot"))
+  )
+  
+  
+)
+
+# Define server logic
+server <- function(input, output) {
+  
+  # Create a reactive plot based on the selected team
+  output$defend_radar_plot <- renderPlotly({
+    # Find selected team's row
+    choice_team_row <- combined_Defend[combined_Defend$Team == input$radar_team, ][, -1]
+    
+    # Calculate the average statistic values across all teams
+    avg_stats <- colMeans(combined_Defend[, -1])
+    
+    team_row <- (choice_team_row - avg_stats) * 100 / avg_stats
+    
+    # Create a data frame for plotting
+    diff_df <- data.frame(statistic = colnames(team_row),
+                          value = as.numeric(team_row),
+                          stringsAsFactors = FALSE)
+    
+    # Create the plot
+    plot_ly(diff_df, type = "scatterpolar", mode = "lines", line = list(width = 2, color = '#636EFA')) %>%
+      add_trace(r = diff_df$value, theta = diff_df$statistic,
+                name = paste0(input$radar_team, "'s Defend Statistics")) %>%
+      layout(
+        title = paste0(input$radar_team, "'s Defend Statistics"),
+        polar = list(radialaxis = list(visible = TRUE, range = c(-50, 80))),
+        showlegend = TRUE,
+        legend = list(
+          x = 0.1, y = 0.9,
+          bgcolor = "rgba(255, 255, 255, 0.85)",
+          bordercolor = "#FFFFFF",
+          borderwidth = 2
+        ),
+        margin = list(l = 20, r = 20, b = 20, t = 40),
+        paper_bgcolor = "white",
+        plot_bgcolor = "white"
+      )
+  })
+  
+}
+
+# Run the application
+shinyApp(ui, server)
+
+
+```
+
+
+
+
+# for the pass
+```{r}
+
+
+library(shiny)
+library(openxlsx)
+library(ggplot2)
+library(ggrepel)
+library(plotly)
+
+# Read data for Combined Attack
+combined_Pass <- read.xlsx("data_clean/combined_Pass.xlsx", sheet = 1, startRow = 1)
+
+# Define UI for application
+ui <- fluidPage(
+  
+  fluidRow(
+    column(6, align = "center", h1("Pass Statistics Plot")),
+    column(4, align = "right", selectInput("radar_team", "Select a team:",
+                                           choices = unique(combined_Pass$Team)))
+  ),
+  
+  hr(),
+  
+  # Show a plot of the selected team's defend statistics
+  fluidRow(
+    column(6, plotlyOutput("pass_radar_plot"))
+  )
+  
+  
+)
+
+# Define server logic
+server <- function(input, output) {
+  
+  # Create a reactive plot based on the selected team
+  output$pass_radar_plot <- renderPlotly({
+    # Find selected team's row
+    choice_team_row <- combined_Pass[combined_Pass$Team == input$radar_team, ][, -1]
+    
+    # Calculate the average statistic values across all teams
+    avg_stats <- colMeans(combined_Pass[, -1])
+    
+    team_row <- (choice_team_row - avg_stats) * 100 / avg_stats
+    
+    # Create a data frame for plotting
+    diff_df <- data.frame(statistic = colnames(team_row),
+                          value = as.numeric(team_row),
+                          stringsAsFactors = FALSE)
+    
+    # Create the plot
+    plot_ly(diff_df, type = "scatterpolar", mode = "lines", line = list(width = 2, color = '#636EFA')) %>%
+      add_trace(r = diff_df$value, theta = diff_df$statistic,
+                name = paste0(input$radar_team, "'s Defend Statistics")) %>%
+      layout(
+        title = paste0(input$radar_team, "'s Defend Statistics"),
+        polar = list(radialaxis = list(visible = TRUE, range = c(-50, 50))),
+        showlegend = TRUE,
+        legend = list(
+          x = 0.1, y = 0.9,
+          bgcolor = "rgba(255, 255, 255, 0.85)",
+          bordercolor = "#FFFFFF",
+          borderwidth = 2
+        ),
+        margin = list(l = 20, r = 20, b = 20, t = 40),
+        paper_bgcolor = "white",
+        plot_bgcolor = "white"
+      )
+  })
+  
+}
+
+# Run the application
+shinyApp(ui, server)
+
+
+```
+
+
+
+
+
+# combine two radar map together
+```{r}
+library(shiny)
+library(openxlsx)
+library(ggplot2)
+library(ggrepel)
+library(plotly)
+
+# Read data for Combined Attack
+combined_Defend <- read.xlsx("data_clean/combined_Defend.xlsx", sheet = 1, startRow = 1)
+# Read data for combined_Pass
+combined_Pass <- read.xlsx("data_clean/combined_Pass.xlsx", sheet = 1, startRow = 1)
+
+# Define UI for application
+ui <- fluidPage(
+
+  fluidRow(
+    column(8, align = "center", h1("Team statistics compare average as Radar Plot")),
+    column(4, align = "right", selectInput("radar_team", "Select a team:",
+                                           choices = unique(combined_Defend$Team)))
+  ),
+  
+  fluidRow(
+    column(6, align = "center", h1("Defend Statistics Plot")),
+    column(6, align = "center", h1("Pass Statistics Plot")),
+    
+  ),
+  
+  hr(),
+  
+  hr(),
+  
+  # Show a plot of the selected team's defend statistics
+  fluidRow(
+    column(6, plotlyOutput("defend_radar_plot")),
+    column(6, plotlyOutput("pass_radar_plot")),
+  )
+  
+  
+)
+
+# Define server logic
+server <- function(input, output) {
+  
+  # Create a reactive plot based on the selected team
+  output$defend_radar_plot <- renderPlotly({
+    # Find selected team's row
+    choice_team_row <- combined_Defend[combined_Defend$Team == input$radar_team, ][, -1]
+    
+    # Calculate the average statistic values across all teams
+    avg_stats <- colMeans(combined_Defend[, -1])
+    
+    team_row <- (choice_team_row - avg_stats) * 100 / avg_stats
+    
+    # Create a data frame for plotting
+    diff_df <- data.frame(statistic = colnames(team_row),
+                          value = as.numeric(team_row),
+                          stringsAsFactors = FALSE)
+    
+    # Create the plot
+    plot_ly(diff_df, type = "scatterpolar", mode = "lines", line = list(width = 2, color = '#636EFA')) %>%
+      add_trace(r = diff_df$value, theta = diff_df$statistic,
+                name = paste0(input$radar_team, "'s Defend Statistics")) %>%
+      layout(
+        title = paste0(input$radar_team, "'s Defend Statistics"),
+        polar = list(radialaxis = list(visible = TRUE, range = c(-50, 80))),
+        showlegend = TRUE,
+        legend = list(
+          x = 0.1, y = 0.9,
+          bgcolor = "rgba(255, 255, 255, 0.85)",
+          bordercolor = "#FFFFFF",
+          borderwidth = 2
+        ),
+        margin = list(l = 20, r = 20, b = 20, t = 40),
+        paper_bgcolor = "white",
+        plot_bgcolor = "white"
+      )
+  })
+   
+    # Create a reactive plot based on the selected team
+  output$pass_radar_plot <- renderPlotly({
+    # Find selected team's row
+    choice_team_row <- combined_Pass[combined_Pass$Team == input$radar_team, ][, -1]
+    
+    # Calculate the average statistic values across all teams
+    avg_stats <- colMeans(combined_Pass[, -1])
+    
+    team_row <- (choice_team_row - avg_stats) * 100 / avg_stats
+    
+    # Create a data frame for plotting
+    diff_df <- data.frame(statistic = colnames(team_row),
+                          value = as.numeric(team_row),
+                          stringsAsFactors = FALSE)
+    
+    # Create the plot
+    plot_ly(diff_df, type = "scatterpolar", mode = "lines", line = list(width = 2, color = '#636EFA')) %>%
+      add_trace(r = diff_df$value, theta = diff_df$statistic,
+                name = paste0(input$radar_team, "'s Defend Statistics")) %>%
+      layout(
+        title = paste0(input$radar_team, "'s Defend Statistics"),
+        polar = list(radialaxis = list(visible = TRUE, range = c(-50, 50))),
+        showlegend = TRUE,
+        legend = list(
+          x = 0.1, y = 0.9,
+          bgcolor = "rgba(255, 255, 255, 0.85)",
+          bordercolor = "#FFFFFF",
+          borderwidth = 2
+        ),
+        margin = list(l = 20, r = 20, b = 20, t = 40),
+        paper_bgcolor = "white",
+        plot_bgcolor = "white"
+      )
+  })
+
+}
+
+# Run the application
+shinyApp(ui, server)
+```
+
+
+
+
+
+
 

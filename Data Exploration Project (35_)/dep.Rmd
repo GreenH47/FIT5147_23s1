@@ -8,6 +8,11 @@ install.packages("reshape2")
 
 ```
 
+```{r}
+install.packages("shinydashboard")
+```
+
+
 # Where does the majority of the game happen
 ```{r}
 library(tidyverse)
